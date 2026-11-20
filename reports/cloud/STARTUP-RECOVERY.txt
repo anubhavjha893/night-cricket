@@ -1,0 +1,56 @@
+REGISTRATION SERVICE INCIDENT AND RECOVERY - 20 NOVEMBER 2026
+
+OBSERVED LIVE
+The Vercel /health, /api/ready and /api/config requests initially returned 502
+with text/html. A direct Render /health probe timed out at 12 seconds; a following
+readiness probe returned 200 after about 11 seconds, then /api/config returned
+200 JSON in 327 ms. Follow-up requests through Vercel returned 200 JSON too.
+Render reported the service not_suspended with the existing deploy still live.
+Application logs showed a fresh server startup and successful database probes.
+These observations match a free-instance wake/startup delay. They do not establish
+an Atlas outage, database loss, suspension or a new deployment crash.
+Render documents that free instances spin down after 15 idle minutes and can
+take about one minute to wake: https://render.com/docs/free
+
+CONFIRMED CLIENT ISSUE
+The UI treated every non-JSON gateway response as 'not connected yet', even when
+the service was deployed and only temporarily waking up. The deployed backend
+was also behind current GitHub main: backend 2f2b880 versus repository 0e09bfb,
+which already includes correction, role and overview changes. Matching backend
+code needs a deliberate Render deploy because its auto-deploy setting is off.
+Current repository changes were preserved; none were reverted to older code.
+
+CHANGES
+frontend/src/services/api.js: only initial GET /config and GET /auth/me have a
+60-second overall deadline and bounded retries (at most 9 attempts, exponential
+delay capped at 10 seconds). Temporary 5xx, network failures and successful HTML
+loading responses may retry. 401/403/429 responses do not retry. Cancellation
+stops both fetch and backoff. Other requests retain the existing 15-second read /
+35-second upload budgets. POST/PUT/PATCH writes are never automatically replayed.
+Non-JSON responses now explain temporary unavailability/wake-up and offer retry,
+rather than claiming the service has never been connected.
+Register.jsx: clearer first-connection loading text. Existing corrections,
+upload progress, restricted role choices and account recovery remain intact.
+Browser tests select the current Admin Overview -> Player registrations flow.
+
+VERIFICATION
+36 current backend tests, 4 WhatsApp helper tests, 2 client timeout/retry tests,
+production build, public secret scan and all 3 isolated browser suites passed.
+The new client test simulates gateway HTML -> healthy JSON, bounded failures,
+unchanged signed-out 401 handling and a failed POST that is attempted only once.
+Existing synthetic flows cover registration, manual WhatsApp, rejected-player
+correction/resubmission with the same ID, and fresh review of the new revision.
+No live load/fault test, player mutation or payment was performed for recovery.
+Final live verification and exact releases are recorded in ignored
+test-results/cloud/smoke.json and test-results/cloud/final-release.json.
+
+RELEASE AND LIMITS
+Deploy the tested current backend first, check readiness, then publish the
+matching frontend. Keep existing secrets/settings and all player data intact.
+This client change tolerates cold starts; it cannot make a free instance stay
+awake or guarantee recovery from an actual backend outage. No paid-plan upgrade
+or artificial keep-alive job was created. A paid compute plan is the documented
+way to remove free-instance idle sleep; owner approval is needed for that cost.
+For future backend changes, deploy Render after tests before relying on new API
+capabilities in the Vercel frontend. GitHub/Vercel pushes alone do not deploy the
+backend while Render auto-deploy remains off.

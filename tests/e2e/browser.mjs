@@ -155,6 +155,7 @@ try {
   await admin
     .getByRole("button", { name: "Open admin panel", exact: true })
     .click();
+  await admin.getByRole("button", { name: "Player registrations", exact: true }).click();
   await admin
     .getByRole("button", { name: "Browser Test Player", exact: true })
     .click();

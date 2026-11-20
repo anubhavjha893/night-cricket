@@ -412,7 +412,10 @@ export function Register() {
               </Alert>
             )}
           {configLoading && (
-            <Loading>Checking registration availability…</Loading>
+            <Loading>
+              Connecting to the registration service… The first connection may
+              take up to a minute.
+            </Loading>
           )}
           <div className="form-stage" key={step}>
             <p className="eyebrow">{info.caption}</p>

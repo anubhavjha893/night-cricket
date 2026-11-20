@@ -94,6 +94,7 @@ try {
   await page
     .getByRole("button", { name: "Open admin panel", exact: true })
     .click();
+  await page.getByRole("button", { name: "Player registrations", exact: true }).click();
   const rowMessage = page.getByRole("button", {
     name: "Send WhatsApp message to Asha Approval Player",
     exact: true,
