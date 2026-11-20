@@ -41,7 +41,7 @@ async function register(agent, data = payload(), file = png) {
     .attach("paymentProof", png, "receipt.png");
 }
 async function loginAdmin(target = app) {
-  const agent = request.agent(target);
+  const agent = request.agent(target).set("Origin", "http://localhost:5173");
   await agent
     .post("/api/admin/login")
     .send({ email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD })
@@ -75,7 +75,7 @@ test("public configuration uses the exact supplied payment account and registrat
 });
 
 test("registration saves a pending player and private GridFS uploads without exposing password", async () => {
-  const agent = request.agent(app);
+  const agent = request.agent(app).set("Origin", "http://localhost:5173");
   const data = payload();
   const { body, headers } = await register(agent, data);
   assert.equal(body.status, "pending");
@@ -103,8 +103,8 @@ test("registration saves a pending player and private GridFS uploads without exp
 });
 
 test("another player cannot view private payment proof or impersonate an administrator", async () => {
-  const a = request.agent(app),
-    b = request.agent(app);
+  const a = request.agent(app).set("Origin", "http://localhost:5173"),
+    b = request.agent(app).set("Origin", "http://localhost:5173");
   await register(a);
   await register(b);
   const { body: player } = await a.get("/api/player/me");
@@ -117,7 +117,7 @@ test("another player cannot view private payment proof or impersonate an adminis
 });
 
 test("approval creates one durable player notification and concurrent decisions cannot overwrite it", async () => {
-  const agent = request.agent(app);
+  const agent = request.agent(app).set("Origin", "http://localhost:5173");
   await register(agent);
   const { body: player } = await agent.get("/api/player/me");
   const outcomes = await Promise.all([
@@ -142,7 +142,7 @@ test("approval creates one durable player notification and concurrent decisions 
 });
 
 test("rejection requires a reason and the reason survives player sign out and sign in", async () => {
-  const agent = request.agent(app);
+  const agent = request.agent(app).set("Origin", "http://localhost:5173");
   const data = payload();
   await register(agent, data);
   const { body: player } = await agent.get("/api/player/me");
@@ -169,19 +169,28 @@ test("rejection requires a reason and the reason survives player sign out and si
 
 test("duplicate phone and transaction reference are rejected without extra uploaded files", async () => {
   const data = payload();
-  await register(request.agent(app), data);
+  await register(
+    request.agent(app).set("Origin", "http://localhost:5173"),
+    data,
+  );
   const count = await mongoose.connection.db
     .collection("uploads.files")
     .countDocuments();
-  const phoneDuplicate = await register(request.agent(app), {
-    ...data,
-    transactionReference: "DIFFERENTUTR123",
-  });
+  const phoneDuplicate = await register(
+    request.agent(app).set("Origin", "http://localhost:5173"),
+    {
+      ...data,
+      transactionReference: "DIFFERENTUTR123",
+    },
+  );
   assert.equal(phoneDuplicate.status, 409);
-  const referenceDuplicate = await register(request.agent(app), {
-    ...payload(),
-    transactionReference: data.transactionReference,
-  });
+  const referenceDuplicate = await register(
+    request.agent(app).set("Origin", "http://localhost:5173"),
+    {
+      ...payload(),
+      transactionReference: data.transactionReference,
+    },
+  );
   assert.equal(referenceDuplicate.status, 409);
   assert.equal(
     await mongoose.connection.db.collection("uploads.files").countDocuments(),
@@ -195,23 +204,23 @@ test("server validates roles, required fields, image content and upload size", a
     now: () => new Date("2026-11-25T12:00:00+05:30"),
   });
   const badRole = await register(
-    request.agent(validationApp),
+    request.agent(validationApp).set("Origin", "http://localhost:5173"),
     payload({ roles: '["Captain"]' }),
   );
   assert.equal(badRole.status, 400);
   const noConsent = await register(
-    request.agent(validationApp),
+    request.agent(validationApp).set("Origin", "http://localhost:5173"),
     payload({ declaration: "false" }),
   );
   assert.equal(noConsent.status, 400);
   const badImage = await register(
-    request.agent(validationApp),
+    request.agent(validationApp).set("Origin", "http://localhost:5173"),
     payload(),
     Buffer.from("<svg>unsafe</svg>"),
   );
   assert.equal(badImage.status, 400);
   const oversized = await register(
-    request.agent(validationApp),
+    request.agent(validationApp).set("Origin", "http://localhost:5173"),
     payload(),
     Buffer.alloc(5 * 1024 * 1024 + 1),
   );

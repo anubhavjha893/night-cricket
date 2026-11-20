@@ -12,7 +12,7 @@ export function PrivateImage({ id, alt, className = "" }) {
     setFailed(false);
     fetch(`${API_BASE}/api/files/${id}`, {
       credentials: "include",
-      signal: controller.signal,
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
     })
       .then((response) => {
         if (!response.ok) throw new Error("Image unavailable");

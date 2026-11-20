@@ -1,0 +1,233 @@
+SECURITY, RELIABILITY AND ROLLOUT REVIEW
+20 November 2026 | Baseline source b5d3bb52d48b717ab337eb23fb9c4628f76da840
+
+DECISION
+Repository fixes are verified locally. Full production rollout is held.
+The currently checked live release is Sites version 5, a private static preview:
+https://night-cricket-player-registration.bladedcod1.chatgpt.site
+Its registration service is unavailable. A successful homepage is not a passing
+player-registration journey. No real registration, payment or admin decision was
+performed in production. No load/fault test targeted the live site or real DB.
+
+SYSTEM FOUND IN THIS REPOSITORY
+- Frontend: React 19, Vite 7, HashRouter, lazy-loaded pages, static public assets.
+- API: Node/Express 5. Production Docker targets Node 22; this local machine
+  runs Node 26 on Windows. Docker is unavailable here, so image execution and
+  Linux/Node 22 runtime compatibility remain unverified locally.
+- Database/storage: MongoDB/Mongoose 9; private photo/receipt files use GridFS.
+- Auth: seven-day signed HttpOnly JWT cookies, player phone/password and admin
+  email/password. API roles and file ownership are checked server-side.
+- Payments: UPI QR and manual receipt review. No payment gateway, automatic
+  payment verification, email/SMS provider, or metered external call exists.
+- Notifications: stored in the player document with the approval/rejection
+  update. No application background worker. MongoDB performs TTL cleanup for
+  the new limiter/session-revocation records.
+- Delivery: root npm workspaces; frontend build copied to root dist for Sites.
+  .openai/hosting.json declares static hosting only. Source is pushed to the
+  configured Sites repository, then saved/deployed as a versioned archive.
+  The Dockerfile can serve frontend + API on Node hosting; it is not the current
+  Sites runtime. Local Compose is a single-instance development setup.
+
+CRITICAL FLOW TRACED
+React registration -> multipart POST /api/registrations -> opening-date/payment
+guard -> upload/work limits -> Zod validation -> image-content checks -> private
+GridFS writes -> unique player/payment-reference document with pending status
+and initial notification -> HttpOnly player session -> /api/player/me.
+Admin email login -> role-protected player list/details and private receipts ->
+conditional pending-only decision -> atomic status + in-app notification ->
+player dashboard polling -> real POST logout and persistent cookie revocation.
+Player selections, payment amount, dates, upload fields and approval copy remain.
+
+BASELINE / ACCESS LIMITS
+The initial build and 10 existing API tests passed; npm audit had 0 known
+vulnerabilities. No historical Express traffic metrics/log sink existed.
+The Sites worker-log query for the prior 180 minutes returned 0 error events;
+this is not an Express error rate or proof of production health. No traffic
+histogram, production p95 or production DB/queue CPU metrics were accessible.
+Expected peak traffic was not supplied. Defaults below are assumptions, not
+traffic observations. Baseline and after tests used fresh isolated local mongod
+processes and loopback servers; they are NOT a hosted staging verification.
+
+CONFIRMED FINDINGS AND FIXES
+
+F1 HIGH - Sign-out did not terminate authentication.
+Affected: frontend/src/context/AppProvider.jsx; backend/src/services/session.service.js;
+backend/src/middleware/auth.middleware.js; POST /api/auth/logout.
+Before: frontend called a POST-only logout endpoint with GET, ignored the 404
+and showed a signed-out UI. Even a successful direct POST only cleared the
+browser cookie; replaying a captured cookie still returned 200.
+Fix: correct POST, visible failure while retaining logged-in state, random token
+IDs and TTL-backed hashed-token revocation checked by every authenticated route.
+Evidence: baseline replay 200 -> after 401; cross-instance and legacy-token
+regression; browser verifies failed logout, real logout and sign-in again.
+Status: VERIFIED LOCALLY. Full-backend production enforcement UNVERIFIED.
+
+F2 MEDIUM - Shared-IP lockouts and process-local rate counters.
+Affected: middleware/rate-limit.middleware.js, middleware/security.middleware.js.
+Before: 10 registrations/hour/IP blocked half of 20 valid shared-IP applicants.
+Memory counters were independently reset on each process/restart.
+Fix: atomic MongoDB counters with TTL and hashed identities, account failure
+limits separate from broad IP limits, user-scoped search/file budgets, IPv6
+normalisation, explicit trusted-proxy CIDRs and 429 Retry-After/body guidance.
+Evidence: 10/20 -> 20/20 journeys; 10 -> 0 unintended 429s; simultaneous requests
+through two local app instances share a boundary; window rollover works;
+different users behind one IP are not all locked by one account's failures;
+spoofed X-Forwarded-For does not change direct-client identity.
+Status: VERIFIED LOCALLY with two app instances, NOT real production hosts.
+
+F3 MEDIUM - Expensive request work and dependency waits lacked explicit budgets.
+Affected: registration routes, work-limit middleware, file service, database
+configuration, http-server.js and frontend API/file clients.
+Before: multipart buffers were accepted before date/payment availability checks;
+no application admission bound or frontend request deadline. A malformed image
+could escape the content detector as an internal error. Deep list pages remained
+expensive despite a fixed page size.
+Fix: availability checked before multipart parsing, four expensive tasks/process,
+5 MB/image and 11 MB declared-request limit, 32 KB JSON, 20-result pages capped
+at page 500, query/pool/network time budgets, file-stream and client deadlines.
+Admission remains held if the client disconnects while hashing/DB work continues.
+Fix the actual database connection settings; do not pass maxTimeMS as a native
+MongoClient connection option. It is set at the Mongoose query layer.
+Evidence: malformed image/JSON/oversize regressions, queue admission and client
+disconnect tests, pagination validation and dependency-loss checks.
+Status: VERIFIED LOCALLY; large-image peak-throughput capacity UNVERIFIED.
+
+F4 MEDIUM - Hashing blocked the event loop; long passwords silently truncated.
+Affected: password.service.js; Player/Admin models; registration/auth controllers.
+The original 128-character input policy exceeded bcrypt's 72-byte input limit.
+The first successful-load repeat showed ~101 ms event-loop p95 with bcryptjs.
+Fix: native asynchronous bcrypt with 12 rounds. During rolling phase 1, reject
+new inputs beyond 72 UTF-8 bytes rather than truncate. Optional phase 2 hashes
+the whole input using SHA-256 then bcrypt and tags its storage scheme, with
+legacy-hash verification and upgrade after successful login.
+Evidence: native final loop p95 32.08 ms; different suffixes after 72 bytes fail
+authentication under the new scheme; legacy account login/upgrade passes.
+Status: VERIFIED LOCALLY. PASSWORD_SCHEME_ENABLED defaults false for rollout
+compatibility. Existing legacy long-password ambiguity requires a reset or a
+successful upgrade; it is not claimed retroactively solved for stored hashes.
+
+F5 MEDIUM - Uploaded QR could remain loading when UPI ID was cleared.
+Affected: frontend/src/pages/Register.jsx.
+Fix: use the uploaded QR even when no generated QR exists, honour API_BASE for
+separate-host deployments, and use the configured payee in accessible text.
+Evidence: browser clears the UPI field, uploads a synthetic QR fixture, opens a
+fresh mobile registration session and verifies the image really decodes.
+Status: VERIFIED LOCALLY (image route/loading; no real payment made).
+
+F6 MEDIUM - Retried registration returned a duplicate error after lost success.
+Affected: controllers/registration.controller.js.
+Fix: matching phone + payment reference + verified password can recover the same
+registration/session; unique DB indexes still protect competing writes. Failed
+competing uploads are removed. Arbitrary callers cannot recover another player.
+Evidence: parallel identical submissions return 201/200, one player record and
+exactly two images. Bad credentials and conflicting references still reject.
+Status: VERIFIED LOCALLY within the announced registration window.
+
+F7 MEDIUM - Concurrent payment-setting updates lost changes/orphaned uploads.
+Affected: controllers/settings.controller.js.
+Fix: compare-and-set on the previously read settings timestamp; a competing
+update gets 409 and its uploaded image is cleaned up.
+Evidence: concurrent settings update regression: 200/409, referenced QR exists,
+only one new file remains. No destructive cleanup of real files was performed.
+Status: VERIFIED LOCALLY. Process crashes between GridFS writes and record
+creation can still leave orphan files; an owner-approved reconciliation job
+and retention policy are not installed.
+
+F8 LOW / DEFENCE HARDENING - Incomplete origin and production-cookie policy.
+Affected: security.middleware.js and session handling.
+Fix: trusted Origin required for cookie-authenticated writes, reject null/foreign
+origins, validate secure production origins/cookies and reject trust-all or
+numeric-hop proxy settings. Existing role/owner decisions remain independent.
+Evidence: permission matrix, missing/foreign Origin rejection, secure cookie
+attributes and proxy-spoof tests. No prior browser CSRF exploit is claimed.
+Status: VERIFIED LOCALLY; host ingress policy requires owner verification.
+
+F9 LOW / RELIABILITY - Health, metrics and diagnostics were insufficient.
+Affected: app.js, observability.middleware.js, config/http-server.js, Dockerfile.
+Fix: readiness is 503 on draining/disconnection, bounded/coalesced DB ping;
+liveness remains available; request IDs and bounded, admin-only per-route metrics;
+optional logs exclude credentials/bodies/query text/raw IPs. Explicit HTTP
+timeouts and draining shutdown allow existing responses to complete.
+Evidence: 20 parallel readiness checks use one DB ping; DB-down API/readiness
+checks reject promptly; in-flight response completes before disconnect.
+Status: VERIFIED LOCALLY. Docker healthcheck and CI configuration were added,
+but the Docker image and remote CI were NOT executed in this environment.
+
+PERMISSION AND INPUT REVIEW THAT PASSED
+Every admin list/detail/decision/settings/metrics route independently requires
+admin role. Private files require their player owner or an admin. Login/session
+expiry, expired/forged credentials, password hashes excluded from responses,
+pending-only decision writes, duplicate phone/payment references, allowed upload
+formats and input sizes, literal search escaping and pagination were checked.
+React uses escaped text; no unsafe HTML rendering was found. No account recovery
+endpoint exists (organiser-assisted process only), so no reset limiter/provider
+was invented. No secrets in tracked .env history or configured secret values in
+the public text assets were found. Dependency audit after changes: 0 known
+vulnerabilities. These checks are not an exhaustive penetration-test certificate.
+
+BEFORE / AFTER (SAME CAPPED ISOLATED-LOCAL WORKLOAD)
+Metric                              Baseline            Final
+Complete critical journeys           10/20 (50%)         20/20 (100%)
+Journey API throughput               4.21 requests/s     7.25 requests/s
+Journey API p95                      336.67 ms           268.39 ms
+Unintended journey 429s              10                  0
+5xx in journey / QR phases           0 / 0               0 / 0
+Generated QR throughput              10.08 requests/s    10.08 requests/s
+Generated QR p95                     21.52 ms            5.22 ms
+Captured cookie after logout         200 (accepted)      401 (rejected)
+Process peak RSS                     138.8 MiB           133.1 MiB
+Event-loop p95                       35.00 ms            32.08 ms
+Peak checked-out Mongo connections   3                   5
+
+The first repeat removed shared-IP failures and reduced QR latency; native
+hashing then removed the measured hashing bottleneck. Final load was run without
+browser tests in parallel. A separate concurrent-QA run was excluded from the
+comparison. Raw accepted runs are baseline.json, after-first.json and after.json.
+More requests completed after the fix, so throughput gain reflects restored
+useful journeys; it is not a maximum-capacity or production scaling claim.
+
+LOAD LIMITS AND LIMITER ASSUMPTIONS
+20 synthetic complete journeys, offered at 1/second; at most two journeys in
+progress. Then 100 generated QR reads at 10/second with at most four in flight.
+Cap 400 total requests, 90 seconds, stop after 3 server errors or 512 MiB RSS.
+The run used 1x1 PNG fixtures, not maximum-size 5 MB photos. No payment/provider
+calls. Realistic large-media throughput, sustained overload, true multi-host
+behaviour, database CPU/queue saturation and regional/CDN behaviour are unverified.
+Highest verified offered load is this workload only, not an estimated peak.
+
+Defaults: API 600/min/IP; login 180/15min/IP plus 12 failed attempts/account;
+registration 300/hour/IP; generated QR 120/min/IP; admin search and private files
+120/min/authenticated user; four concurrent expensive tasks/process. Successful
+logins do not consume the account-failure budget. Unknown traffic assumption:
+up to 40 active dashboards and up to 300 registrations/hour sharing an IP.
+Tune from host metrics before launch; fixed windows permit boundary bursts.
+All instances must use the same DB and JWT secret. Counters fail closed with a
+retryable 503 if storage fails. These application limits do not replace a WAF.
+
+LIVE CHECK / ROLLOUT STATUS
+VERIFIED LIVE: private preview release 5, exact saved version
+appgprj_6affc680d0bc8191b542be11192b6f72~appgver_e098da842a2c8191baaed142b46ac863.
+Read-only normal browser checks: homepage content 200; both original photos
+decode; player/admin selector shows admin email input; no JS errors.
+The registration page displays its missing-service error. Thus the complete
+registration journey is unavailable live, not passed.
+VERIFIED LOCALLY: build, 10 original API tests plus focused security regressions,
+client deadlines, full desktop/mobile browser flow and the capped load runs.
+VERIFIED IN HOSTED STAGING: none; no staging backend was supplied/provisioned.
+UNVERIFIED: production backend, traffic p95/errors, backup/restore, least-privilege
+DB grants, WAF/CDN controls, Docker runtime, hosted CI and canary/zero-downtime.
+The pre-existing long-running localhost backend was not restarted against the
+real database during this audit. No real player or payment records were changed.
+
+NEXT ACTION / ROLLBACK
+See ROLLOUT.txt for exact gates, required host/DB access, two-phase password
+upgrade and rollback instructions. Keep release 5 live; save candidate source
+without promotion. The remaining step is to provide a Node-capable deployment
+target and persistent MongoDB secrets, verify that host's controls and backups,
+then run staging gates and a dedicated-account canary before public launch.
+
+PRIMARY REFERENCES USED
+Express trusted proxies: https://expressjs.com/en/guide/behind-proxies/
+Mongoose timeouts/pooling: https://mongoosejs.com/docs/connections.html
+Rate-limit memory-store scope: https://express-rate-limit.mintlify.app/reference/stores
+Native bcrypt async/72-byte boundary: https://github.com/kelektiv/node.bcrypt.js

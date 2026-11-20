@@ -1,7 +1,11 @@
 import { Player, Settings } from "../models/index.js";
 import { fail } from "../utils/http-error.js";
 
-import bcrypt from "bcryptjs";
+import {
+  hashPassword,
+  verifyPassword,
+  writePasswordScheme,
+} from "../services/password.service.js";
 import { randomBytes } from "node:crypto";
 import { tournament } from "../config/tournament.js";
 import { registrationSchema } from "../validators/registration.schema.js";
@@ -12,7 +16,23 @@ import {
   deleteImage,
 } from "../services/file.service.js";
 
-export function createRegistrationController({ session, now }) {
+export function createRegistrationController({ session, now, env }) {
+  async function replayRegistration(data, password, res) {
+    const existing = await Player.findOne({
+      phone: data.phone,
+      transactionReference: data.transactionReference,
+    }).select("+passwordHash +passwordScheme");
+    if (!existing || !(await verifyPassword(password, existing, env)))
+      return false;
+    session.setSession(res, existing, "player");
+    res.status(200).json({
+      registrationId: existing.registrationId,
+      status: existing.status,
+      message:
+        "Your existing registration was recovered. No duplicate was created.",
+    });
+    return true;
+  }
   async function registerPlayer(req, res) {
     const settings = await Settings.findById("tournament");
     const window = registrationWindow(settings, now());
@@ -30,13 +50,17 @@ export function createRegistrationController({ session, now }) {
     }
     const result = registrationSchema.safeParse({ ...req.body, roles });
     if (!result.success)
-      return res
-        .status(400)
-        .json({
-          message: "Please check your registration details.",
-          errors: result.error.flatten().fieldErrors,
-        });
+      return res.status(400).json({
+        message: "Please check your registration details.",
+        errors: result.error.flatten().fieldErrors,
+      });
     const { password, declaration, ...data } = result.data;
+    if (await replayRegistration(data, password, res)) return;
+    if (!writePasswordScheme(env) && Buffer.byteLength(password, "utf8") > 72)
+      return res.status(400).json({
+        message: "Please check your password.",
+        errors: { password: ["Use a password of at most 72 UTF-8 bytes."] },
+      });
     if (await Player.exists({ phone: data.phone }))
       throw fail(
         409,
@@ -67,7 +91,8 @@ export function createRegistrationController({ session, now }) {
         ...data,
         playerPhotoId,
         paymentProofId,
-        passwordHash: await bcrypt.hash(password, 12),
+        passwordHash: await hashPassword(password, env),
+        passwordScheme: writePasswordScheme(env),
         registrationId: `UGM2-${randomBytes(6).toString("hex").toUpperCase()}`,
         paymentAmount: tournament.fee,
         notifications: [
@@ -79,15 +104,18 @@ export function createRegistrationController({ session, now }) {
         ],
       });
       session.setSession(res, player, "player");
-      res
-        .status(201)
-        .json({
-          registrationId: player.registrationId,
-          status: player.status,
-          message: "Registration received. Verification is pending.",
-        });
+      res.status(201).json({
+        registrationId: player.registrationId,
+        status: player.status,
+        message: "Registration received. Verification is pending.",
+      });
     } catch (error) {
       await Promise.all(saved.map(deleteImage));
+      if (
+        error.code === 11000 &&
+        (await replayRegistration(data, password, res))
+      )
+        return;
       throw error;
     }
   }

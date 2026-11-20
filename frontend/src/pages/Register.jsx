@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   IndianRupee,
 } from "lucide-react";
-import { api } from "../services/api";
+import { api, API_BASE } from "../services/api";
 import { Alert } from "../components/common/Alert";
 import { Loading } from "../components/common/Loading";
 import { useApp } from "../hooks/useApp";
@@ -469,14 +469,14 @@ export function Register() {
                         <div className="qr-frame">
                           {qrError ? (
                             <p>The QR could not load. Use the UPI ID below.</p>
-                          ) : qr ? (
+                          ) : qr || config.payment.uploadedQr ? (
                             <img
                               src={
                                 config.payment.uploadedQr
-                                  ? `${config.payment.qrUrl}`
+                                  ? `${API_BASE}${config.payment.qrUrl}`
                                   : qr
                               }
-                              alt="UPI QR code for ₹150 registration payment to Anubhav Jha"
+                              alt={`UPI QR code for ₹${config.fee} registration payment to ${config.payment.payeeName}`}
                               onError={() => setQrError(true)}
                             />
                           ) : (

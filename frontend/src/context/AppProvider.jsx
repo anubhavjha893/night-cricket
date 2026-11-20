@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [config, setConfig] = useState(fallbackConfig);
   const [configError, setConfigError] = useState("");
   const [configLoading, setConfigLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
   async function refreshConfig() {
     setConfigLoading(true);
     try {
@@ -33,8 +34,13 @@ export function AppProvider({ children }) {
     }
   }
   async function logout() {
-    await api("/auth/logout").catch(() => {});
-    setUser(null);
+    setAuthError("");
+    try {
+      await api("/auth/logout", { method: "POST" });
+      setUser(null);
+    } catch {
+      setAuthError("Sign out could not be completed. Please try again.");
+    }
   }
   useEffect(() => {
     refreshConfig();
@@ -51,6 +57,7 @@ export function AppProvider({ children }) {
         config,
         configError,
         configLoading,
+        authError,
         refreshConfig,
       }}
     >

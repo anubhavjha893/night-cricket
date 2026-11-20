@@ -10,7 +10,10 @@ export function fileBucket() {
 export async function checkImage(file, label) {
   if (!file)
     throw Object.assign(new Error(`${label} is required.`), { status: 400 });
-  const type = await fileTypeFromBuffer(file.buffer);
+  let type;
+  try {
+    type = await fileTypeFromBuffer(file.buffer);
+  } catch {}
   if (!type || !["image/jpeg", "image/png", "image/webp"].includes(type.mime)) {
     throw Object.assign(
       new Error(`${label} must be a valid JPG, PNG or WebP image.`),
@@ -28,7 +31,10 @@ export function saveImage(file, purpose) {
         metadata: { contentType: file.verifiedType, purpose },
       },
     );
-    stream.on("error", reject);
+    stream.on("error", async (error) => {
+      await stream.abort().catch(() => {});
+      reject(error);
+    });
     stream.on("finish", () => resolve(stream.id));
     stream.end(file.buffer);
   });
@@ -53,7 +59,16 @@ export async function sendImage(id, res) {
     "Content-Disposition": `inline; filename="${file.filename}"`,
   });
   const stream = fileBucket().openDownloadStream(objectId);
+  const deadline = setTimeout(() => {
+    stream.destroy();
+    res.destroy();
+  }, 15000);
+  deadline.unref();
+  res.once("finish", () => clearTimeout(deadline));
   stream.on("error", () => res.destroy());
-  res.on("close", () => stream.destroy());
+  res.on("close", () => {
+    clearTimeout(deadline);
+    stream.destroy();
+  });
   stream.pipe(res);
 }

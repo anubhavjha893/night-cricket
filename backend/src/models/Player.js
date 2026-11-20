@@ -27,6 +27,7 @@ const playerSchema = new Schema(
     ],
     tshirtSize: { type: String, required: true },
     passwordHash: { type: String, required: true, select: false },
+    passwordScheme: { type: String, enum: ["sha256-bcrypt-v1"], select: false },
     playerPhotoId: { type: Schema.Types.ObjectId, required: true },
     paymentProofId: { type: Schema.Types.ObjectId, required: true },
     transactionReference: { type: String, required: true, unique: true },
@@ -45,6 +46,7 @@ const playerSchema = new Schema(
   { timestamps: true },
 );
 playerSchema.index({ name: 1, createdAt: -1 });
+playerSchema.index({ status: 1, name: 1, _id: 1 });
 
 export const Player =
   mongoose.models.Player || mongoose.model("Player", playerSchema);

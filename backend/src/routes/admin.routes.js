@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createAuthController } from "../controllers/auth.controller.js";
+import { runWork } from "../middleware/work-limit.middleware.js";
 import {
   listPlayers,
   getPlayerDetails,
@@ -11,16 +12,41 @@ import {
 } from "../controllers/settings.controller.js";
 import { requireAdmin } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
-import {createSearchLimiter,createFileLimiter} from '../middleware/rate-limit.middleware.js';
+import { boundedUpload } from "../middleware/registration.middleware.js";
+import {
+  createSearchLimiter,
+  createFileLimiter,
+} from "../middleware/rate-limit.middleware.js";
 
-export function createAdminRouter({ requireUser, session, loginLimiter,workGate,env }) {
+export function createAdminRouter({
+  requireUser,
+  session,
+  loginLimiter,
+  workGate,
+  env,
+}) {
   const router = Router();
-  router.post("/login", loginLimiter,workGate,createAuthController(session).loginAdmin);
+  router.post(
+    "/login",
+    loginLimiter,
+    workGate,
+    runWork(createAuthController(session, env).loginAdmin),
+  );
   router.use(requireUser, requireAdmin);
-  router.get("/players",createSearchLimiter(env),listPlayers);
+  router.get("/metrics", (req, res) =>
+    res.json(req.app.locals.observation.snapshot()),
+  );
+  router.get("/players", createSearchLimiter(env), listPlayers);
   router.get("/players/:id", getPlayerDetails);
   router.patch("/players/:id/decision", reviewPlayer);
   router.get("/settings", getSettings);
-  router.put("/settings",createFileLimiter(env),workGate,upload.single("paymentQr"),updateSettings);
+  router.put(
+    "/settings",
+    createFileLimiter(env),
+    boundedUpload,
+    workGate,
+    upload.single("paymentQr"),
+    runWork(updateSettings),
+  );
   return router;
 }

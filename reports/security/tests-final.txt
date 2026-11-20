@@ -1,0 +1,43 @@
+
+> ugm-cricket-registration@2.0.0 test
+> npm run test --workspace backend
+
+
+> @ugm/backend@2.0.0 test
+> node --test --test-concurrency=1 tests/api.test.js tests/security.test.js
+
+✔ public configuration uses the exact supplied payment account and registration dates (1169.1263ms)
+✔ registration saves a pending player and private GridFS uploads without exposing password (351.9853ms)
+✔ another player cannot view private payment proof or impersonate an administrator (543.8834ms)
+✔ approval creates one durable player notification and concurrent decisions cannot overwrite it (322.3237ms)
+✔ rejection requires a reason and the reason survives player sign out and sign in (562.5016ms)
+✔ duplicate phone and transaction reference are rejected without extra uploaded files (309.2781ms)
+✔ server validates roles, required fields, image content and upload size (69.366ms)
+✔ server enforces India-time opening and closing boundaries (49.5343ms)
+✔ admin list is alphabetic, filterable and paginated; search treats regex characters literally (25.3515ms)
+✔ admin can update the payment QR and registration availability; cross-origin writes are blocked (42.3941ms)
+✔ logout revokes captured cookies across instances, including legacy JWTs; new login still works (1793.8596ms)
+✔ all admin operations and metrics are protected; private files require ownership (674.7086ms)
+✔ cookie-authenticated changes reject missing, null and untrusted origins (308.8962ms)
+✔ rate limits are atomic across app instances, expire by window, hash identity and return Retry-After (21.657ms)
+✔ login failures target an account without locking every user on the same IP; forwarded identity cannot evade limits (802.7627ms)
+✔ production requires HTTPS origins and uses Secure HttpOnly cookies (255.7517ms)
+✔ normal registration retries recover the same application and concurrent duplicates leave exactly two files (1047.7401ms)
+✔ new full-input password hashes distinguish suffixes beyond 72 bytes; legacy accounts upgrade without resetting passwords (1555.459ms)
+✔ closed registration rejects the request before multipart processing; malformed images produce 400 (57.1763ms)
+✔ expensive-work admission is bounded and releases capacity after a response (16.7135ms)
+✔ disconnecting a client does not release a password-work slot before computation finishes (40.0045ms)
+✔ concurrent payment settings updates cannot delete the active QR or orphan a competing upload (25.3776ms)
+✔ failed logout storage leaves the session active and returns retryable failure (270.0436ms)
+✔ HTTP timeouts and shutdown drain are bounded and reject new readiness checks (10.6693ms)
+✔ shutdown allows an already-running response to finish before database disconnect (3041.9537ms)
+✔ readiness coalesces parallel probes so public checks cannot fan out database work (43.4918ms)
+✔ actual database loss fails readiness/API quickly while liveness stays healthy (21.3372ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15528.8972

@@ -1,0 +1,15 @@
+{
+  "build": "passed locally",
+  "apiAndSecurityTests": 27,
+  "clientDeadlineTests": 1,
+  "desktopMobileFlow": "passed locally; synthetic MongoDB",
+  "dependencyAuditKnownVulnerabilities": 0,
+  "publicTextAssetsScanned": 11,
+  "candidatePromoted": false,
+  "liveVersionChecked": 5,
+  "liveBackendFlow": "unavailable; production rollout held",
+  "stagingVerification": "not performed: no hosted staging backend",
+  "dockerRuntime": "unverified: Docker is unavailable",
+  "remoteCI": "configured, not executed",
+  "realDatabaseMutated": false
+}

@@ -1,0 +1,44 @@
+{
+  "label": "after",
+  "commit": "see git provenance",
+  "environment": "isolated local MongoDB, no payment/provider calls",
+  "caps": {
+    "journeys": 20,
+    "journeysPerSecond": 1,
+    "qrReads": 100,
+    "qrPerSecond": 10,
+    "maxConcurrent": 4,
+    "totalRequestCap": 400,
+    "timeoutSeconds": 90,
+    "stopAfterServerErrors": 3,
+    "rssStopMiB": 512
+  },
+  "journeys": {
+    "requests": 140,
+    "throughputRps": 7.25,
+    "p95Ms": 268.39,
+    "serverErrors": 0,
+    "rateLimited": 0,
+    "attemptedJourneys": 20,
+    "successfulJourneys": 20,
+    "flowSuccessPct": 100
+  },
+  "qr": {
+    "requests": 100,
+    "throughputRps": 10.08,
+    "p95Ms": 5.22,
+    "serverErrors": 0,
+    "rateLimited": 0
+  },
+  "probes": {
+    "replayedCookieStatus": 401,
+    "parserDisclosedBody": false
+  },
+  "resources": {
+    "peakRssMiB": 133.1,
+    "eventLoopP95Ms": 32.08,
+    "maxCheckedOutDatabaseConnections": 5,
+    "databaseCpuAndQueue": "not instrumented; no saturation claim"
+  },
+  "seconds": 30.77
+}

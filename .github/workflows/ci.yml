@@ -1,0 +1,24 @@
+name: Security and registration checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_CHANNEL: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: node scripts/check-public-secrets.mjs
+      - run: npm test
+      - run: node --test tests/security/client.test.mjs
+      - run: npm run test:browser
+      - run: npm audit --audit-level=high

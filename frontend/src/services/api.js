@@ -9,12 +9,16 @@ export class ApiError extends Error {
 }
 
 export async function api(endpoint, { method = "GET", body, signal } = {}) {
+  const deadline = AbortSignal.timeout(
+    body instanceof FormData ? 35000 : 15000,
+  );
+  const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
   let response;
   try {
     response = await fetch(`${API_BASE}/api${endpoint}`, {
       method,
       credentials: "include",
-      signal,
+      signal: requestSignal,
       headers:
         body instanceof FormData ? {} : { "Content-Type": "application/json" },
       body:
@@ -25,7 +29,12 @@ export async function api(endpoint, { method = "GET", body, signal } = {}) {
             : JSON.stringify(body),
     });
   } catch (error) {
-    if (error.name === "AbortError") throw error;
+    if (signal?.aborted) throw error;
+    if (deadline.aborted)
+      throw new ApiError(
+        "The request timed out. Please check your registration status before trying again.",
+        504,
+      );
     throw new ApiError(
       "The registration service is unavailable. Please try again shortly.",
       503,

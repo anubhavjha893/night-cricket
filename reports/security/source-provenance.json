@@ -1,0 +1,6 @@
+{
+  "baselineCommit": "b5d3bb52d48b717ab337eb23fb9c4628f76da840",
+  "candidateSourceSha256": "ee988325e53042c0dfd32b84649cfdc7d86752abbf78b74ef30203a6fb4ca53e",
+  "scope": "sorted backend/src and frontend/src paths and UTF-8 source normalized to LF; no env files",
+  "files": 76
+}

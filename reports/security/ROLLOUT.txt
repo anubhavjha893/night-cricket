@@ -1,0 +1,119 @@
+PRODUCTION ROLLOUT AND ROLLBACK
+Date: 20 November 2026 (Asia/Kolkata)
+
+RELEASE GATE / CURRENT DECISION
+Hold the full production rollout. The available URL is an owner-private static
+Sites preview, not an Express deployment. The live registration service is
+unavailable. A passing homepage does not satisfy the critical-flow gate.
+Save the candidate source for review; leave the currently checked live release 5
+unchanged until the Node hosting and persistent MongoDB service are configured.
+Do not claim that repository fixes are already active in a production backend.
+
+THRESHOLDS DEFINED BEFORE DEPLOYMENT
+In isolated staging, repeat tests/security/load.mjs using synthetic users:
+- 100% of 20 registration -> review -> approval -> notification -> logout journeys.
+- No 5xx, no unintended 429 at the declared load.
+- Journey API p95 <=400 ms on the same baseline machine (baseline: 337 ms).
+- Generated-QR API p95 <=25 ms on the same machine (baseline: 21.52 ms).
+- New environment validation additionally requires agreed host-specific budgets;
+  local Windows measurements cannot serve as a production capacity estimate.
+For a real canary: dedicated test-account flow success 100%, readiness 200,
+5xx <1%, and p95 <=500 ms or <=20% above the measured staging baseline,
+whichever is stricter. Stop promotion on any critical-flow failure, 3 consecutive
+readiness failures, or a sustained 5-minute threshold breach. A short low-volume
+smoke test cannot establish a statistically meaningful production p95/error rate.
+
+HOST AND DATABASE PREREQUISITES (OWNER ACCESS REQUIRED)
+1. Provide a Node-capable HTTPS staging/production host, its URL, and deployment
+   access. Serve frontend/dist and /api together where possible. Sites static
+   hosting cannot execute this Express/MongoDB backend. No paid host was created.
+2. Provide a persistent MongoDB URI through host secrets, not frontend variables.
+   Use authentication, TLS where applicable, a network allowlist and database-
+   scoped permissions. Verify database backups and a restore in staging.
+   The local Compose MongoDB is unauthenticated development-only and unexposed
+   on the host network. Do not use it as a public production database.
+3. Set NODE_ENV=production, exact HTTPS APP_ORIGIN, a strong common JWT_SECRET
+   on all instances, and exact TRUSTED_PROXY_CIDRS supplied by the host.
+   TRUST_PROXY must remain 0. Do not trust numeric hops or all IP addresses.
+   Inspect ingress stripping of spoofed forwarding headers and TLS termination.
+4. Confirm CDN/WAF and DDoS settings, body limits, header/body timeouts and bot
+   controls in the host dashboard. The available Sites tools expose no WAF
+   configuration or traffic histogram; those controls were not verified.
+5. Verify capacity for <=20 MongoDB connections per app instance, four concurrent
+   expensive tasks per instance, and the database's total connection budget.
+   Tune rate defaults from actual traffic; the current assumptions are documented
+   in REVIEW.txt. MongoDB is the shared limiter store, not an in-memory fallback.
+
+COMPATIBLE DATABASE / SESSION UPGRADE
+Changes are additive: RateCounter and RevokedSession TTL collections, an extra
+Player index, and optional passwordScheme fields. No players or uploaded files
+are deleted or rewritten by a migration. Keep existing fields and indexes during
+rollout. Bootstrap creates these indexes; rehearse index creation on a restored
+staging dataset and run it before traffic promotion if creation is expensive.
+Keep PASSWORD_SCHEME_ENABLED=false during phase 1. New instances read legacy
+bcrypt hashes and continue writing legacy-compatible hashes for new users.
+New passwords over 72 UTF-8 bytes are explicitly rejected rather than silently
+truncated in this transition. Normal existing passwords remain valid.
+Only after every old instance has drained may phase 2 enable
+PASSWORD_SCHEME_ENABLED=true consistently across instances. New hashes then cover
+the complete input; old hashes upgrade after successful login. Old long-password
+ambiguity cannot be reconstructed from an existing hash: arrange a reset for
+legacy accounts known to have used more than 72 bytes. There is no automated
+password recovery/OTP feature in this application.
+Old binaries do not enforce the new logout revocation collection. Therefore,
+the logout guarantee becomes deployment-wide only after old instances drain.
+
+CONTROLLED RELEASE
+1. Preserve the old immutable source/image/version, back up MongoDB and capture
+   a timestamped baseline using the protected metrics endpoint and host metrics.
+2. Deploy to an isolated staging DB with synthetic data first. Run npm ci,
+   npm run build, npm test, the client test and npm run test:browser. Run the
+   bounded load test there; no money, SMS, email or metered service is involved.
+   Docker and Node 22/Linux must be tested on the intended host: local checks
+   used Windows/Node 26, and the newly added CI workflow was not executed here.
+3. Use at least two healthy instances/load balancing if the host supports a
+   rolling release. Route a small canary, then 25%, then 100%, observing the
+   above thresholds before each increase. Retain old hashed frontend assets
+   or use versioned asset origins so existing browser sessions can lazy-load
+   their previous release chunks during the transition.
+4. Configure /api/ready as readiness (database ping, <=1-second budget) and
+   /api/live as liveness. A draining/disconnected app must return readiness 503.
+   HTTP headers: 10 seconds; request body: 30 seconds; socket idle: 35 seconds;
+   keep-alive: 5 seconds. Shutdown drains active requests for up to 10 seconds.
+   Proxy termination grace must exceed 10 seconds (local Compose uses 15).
+5. Repeat a low-volume browser flow with a dedicated test account: sign in,
+   verify status/private receipt, sign out, and confirm replayed session rejects.
+   Use an agreed sandbox payment fixture for any production registration test.
+   Do not create or approve real player records just to test deployment.
+
+INTERRUPTION CONSTRAINTS
+The available Sites API supports whole-version save/deploy/rollback, not traffic
+splits. Zero-downtime/canary routing is not verified through that interface.
+The bundled local Compose setup has one app instance; replacing its container
+interrupts service until the new instance is ready. Do not present docker compose
+up as a zero-downtime production rollout. The owner must choose a rolling-capable
+host/load balancer or an announced maintenance window before backend deployment.
+
+ROLLBACK
+- Frontend preview: restore saved Sites version 5, exact ID
+  appgprj_6affc680d0bc8191b542be11192b6f72~appgver_e098da842a2c8191baaed142b46ac863
+  for project appgprj_6affc680d0bc8191b542be11192b6f72. Its source commit is
+  b5d3bb52d48b717ab337eb23fb9c4628f76da840. Deploy the existing saved version;
+  do not rebuild an unrelated commit. The current run leaves this version live.
+- Backend phase 1: route back to the retained healthy image, drain the candidate,
+  and keep additive collections/indexes. Do not drop data to roll back code.
+  Prefer retaining the revocation fix; reverting it makes logged-out cookies
+  valid again. If forced to revert session enforcement, rotate JWT_SECRET on
+  all instances to invalidate outstanding cookies and require sign-in again.
+- After phase 2: never roll back to a binary that cannot read passwordScheme.
+  Keep the candidate's dual-format verification and disable further upgrades,
+  or roll back performance/UI changes independently. No destructive hash downgrade.
+- Recheck readiness, critical flow, p95 and errors after rollback.
+
+OBSERVABILITY
+GET /api/admin/metrics requires an administrator session. It reports bounded
+per-route samples and process totals, not a global traffic history. Enable
+REQUEST_LOGS=true to ship structured request ID, route template, method, status
+and duration to a host log sink. Bodies, credentials, query strings, raw IPs and
+player records are excluded. Aggregate metrics/logs across instances on the host.
+Configure alerts there; no production alert rule was installed in this audit.

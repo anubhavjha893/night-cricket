@@ -29,7 +29,12 @@ try {
   server = await new Promise((resolve) => {
     const listener = app.listen(4178, "127.0.0.1", () => resolve(listener));
   });
-  browser = await chromium.launch({ channel: "msedge", headless: true });
+  browser = await chromium.launch({
+    channel:
+      process.env.PLAYWRIGHT_CHANNEL ||
+      (process.platform === "win32" ? "msedge" : "chromium"),
+    headless: true,
+  });
   const playerContext = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   });
@@ -113,13 +118,11 @@ try {
     return canvas.toDataURL("image/png").split(",")[1];
   });
   await page.getByRole("button", { name: /I’ve paid/ }).click();
-  await page
-    .locator("#paymentProof")
-    .setInputFiles({
-      name: "local-test-receipt.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(testReceipt, "base64"),
-    });
+  await page.locator("#paymentProof").setInputFiles({
+    name: "local-test-receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(testReceipt, "base64"),
+  });
   await page
     .getByLabel("Transaction reference / UTR", { exact: false })
     .fill("BROWSERTEST123456");
@@ -191,7 +194,32 @@ try {
   });
   await page.getByRole("button", { name: "Mark all read" }).click();
   await page.locator(".notification-count").waitFor({ state: "hidden" });
+  await page.route("**/api/auth/logout", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Synthetic unavailable response" }),
+    }),
+  );
   await page.getByRole("button", { name: /Sign out/ }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Sign out could not be completed" })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "You’re verified. Get ready." })
+    .waitFor();
+  await page.unroute("**/api/auth/logout");
+  const realLogout = page.waitForResponse((response) =>
+    response.url().endsWith("/api/auth/logout"),
+  );
+  await page.getByRole("button", { name: /Sign out/ }).click();
+  const logoutResponse = await realLogout;
+  assert.equal(
+    logoutResponse.status(),
+    200,
+    `Logout failed: ${await logoutResponse.text()}`,
+  );
   await page.getByLabel(/^Mobile number/).fill("9876543210");
   await page.getByLabel(/^Password/).fill("Browser-player123!");
   await page
@@ -206,14 +234,58 @@ try {
   await admin
     .locator("#paymentQr")
     .setInputFiles("frontend/public/assets/night-stadium.jpg");
+  await admin.locator("#upiId").fill("");
   await admin.getByRole("button", { name: "Save settings" }).click();
   await admin
     .getByText("Payment and registration settings saved.", { exact: true })
     .waitFor();
   assert.equal(Boolean((await Settings.findById("tournament")).qrFileId), true);
+  const newcomer = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const registration = await newcomer.newPage();
+  registration.on("pageerror", (error) => errors.push(error.message));
+  await registration.goto(`${origin}/#/register`);
+  await registration
+    .getByLabel("Full name", { exact: false })
+    .fill("Synthetic QR Check");
+  await registration.getByLabel(/^Age/).fill("23");
+  await registration.getByLabel(/^Mobile number/).fill("9765432109");
+  await registration
+    .getByLabel(/^Full address/)
+    .fill("Synthetic test address only");
+  await registration
+    .getByLabel(/^Create a password/)
+    .fill("Synthetic-QR-password123!");
+  await registration
+    .getByRole("button", { name: "Continue", exact: true })
+    .click();
+  await registration.getByLabel("Batter", { exact: true }).check();
+  await registration.getByRole("radio", { name: "L", exact: true }).check();
+  await registration
+    .locator("#playerPhoto")
+    .setInputFiles("frontend/public/assets/night-stadium.jpg");
+  await registration
+    .getByRole("button", { name: "Continue", exact: true })
+    .click();
+  await registration.locator(".qr-frame img").waitFor();
+  await registration
+    .locator(".qr-frame img")
+    .evaluate((image) => image.decode());
+  assert.match(
+    await registration.locator(".qr-frame img").getAttribute("src"),
+    /\/api\/payment\/qr$/,
+  );
+  assert.equal(
+    await registration
+      .locator(".qr-frame img")
+      .evaluate((image) => image.naturalWidth > 0),
+    true,
+  );
+  await newcomer.close();
   assert.deepEqual(errors, [], "No browser JavaScript errors");
   console.log(
-    "PASS: desktop/mobile React registration, UPI QR, image uploads, pending dashboard, admin payment review, approval notification, read state, player re-login and admin QR settings.",
+    "PASS: desktop/mobile registration, uploads, pending, admin approval/notification, logout failure recovery, re-login and custom QR without a UPI ID.",
   );
   console.log(
     "Screenshots saved to test-results/. All data was isolated test data; no real payment or live submission was made.",

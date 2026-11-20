@@ -1,0 +1,17 @@
+{
+  "label": "before",
+  "url": "https://night-cricket-player-registration.bladedcod1.chatgpt.site",
+  "version": 5,
+  "commit": "b5d3bb52d48b717ab337eb23fb9c4628f76da840",
+  "scope": "low-volume, read-only private static preview; no registration or payment submitted",
+  "checks": {
+    "homeHttpStatus": 200,
+    "homeContent": true,
+    "seasonOnePhotos": true,
+    "adminEmailMode": true,
+    "registrationServiceUnavailable": true,
+    "javascriptErrors": 0
+  },
+  "criticalRegistrationFlow": "UNVERIFIED LIVE / unavailable: this host deploys static assets only; no Express/MongoDB API is configured",
+  "result": "static preview smoke passed; registration backend is a production blocker"
+}

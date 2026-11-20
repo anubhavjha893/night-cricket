@@ -20,7 +20,9 @@
     "test": "npm run test --workspace backend",
     "test:browser": "node tests/e2e/browser.mjs",
     "preview": "npm run preview --workspace frontend",
-    "format": "prettier --write frontend/src backend/src backend/scripts backend/tests tests/e2e frontend/vite.config.js scripts"
+    "format": "prettier --write frontend/src backend/src backend/scripts backend/tests tests/e2e frontend/vite.config.js scripts",
+    "test:security": "node --test --test-concurrency=1 backend/tests/security.test.js tests/security/client.test.mjs",
+    "test:load": "node tests/security/load.mjs after"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

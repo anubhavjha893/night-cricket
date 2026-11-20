@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import QRCode from "qrcode";
+import { paymentQr } from "../services/qr.service.js";
 import { Settings } from "../models/Settings.js";
 import { tournament } from "../config/tournament.js";
 import { registrationWindow } from "../services/registration-window.service.js";
@@ -7,7 +7,9 @@ import { sendImage } from "../services/file.service.js";
 import { fail } from "../utils/http-error.js";
 
 export function getHealth(req, res) {
-  res.json({ ok: mongoose.connection.readyState === 1 });
+  const ready =
+    mongoose.connection.readyState === 1 && !req.app.locals.draining;
+  res.status(ready ? 200 : 503).json({ ok: ready });
 }
 
 export function createTournamentController({ now }) {
@@ -39,11 +41,7 @@ export function createTournamentController({ now }) {
       cu: "INR",
       tn: "UGM Season 2 registration",
     });
-    const png = await QRCode.toBuffer(`upi://pay?${params}`, {
-      width: 400,
-      margin: 3,
-      errorCorrectionLevel: "M",
-    });
+    const png = await paymentQr(params);
     res.type("png").send(png);
   }
 

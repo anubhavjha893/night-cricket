@@ -13,12 +13,10 @@ export async function getSettings(req, res) {
 export async function updateSettings(req, res) {
   const result = paymentSettingsSchema.safeParse(req.body);
   if (!result.success)
-    return res
-      .status(400)
-      .json({
-        message: "Check your payment and registration settings.",
-        errors: result.error.flatten().fieldErrors,
-      });
+    return res.status(400).json({
+      message: "Check your payment and registration settings.",
+      errors: result.error.flatten().fieldErrors,
+    });
   const old = await Settings.findById("tournament");
   let newFileId;
   try {
@@ -36,9 +34,20 @@ export async function updateSettings(req, res) {
     const query = { $set: update };
     if (!newFileId && result.data.removeQr === "true")
       query.$unset = { qrFileId: 1 };
-    const settings = await Settings.findByIdAndUpdate("tournament", query, {
-      returnDocument: "after",
-    });
+    const settings = await Settings.findOneAndUpdate(
+      { _id: "tournament", updatedAt: old.updatedAt },
+      query,
+      {
+        returnDocument: "after",
+      },
+    );
+    if (!settings)
+      throw Object.assign(
+        new Error(
+          "Settings changed during this update. Refresh and try again.",
+        ),
+        { status: 409 },
+      );
     if ((newFileId || result.data.removeQr === "true") && old.qrFileId)
       await deleteImage(old.qrFileId);
     res.json({ message: "Settings saved.", settings });

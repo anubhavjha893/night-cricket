@@ -18,19 +18,24 @@ export async function listPlayers(req, res) {
         $options: "i",
       },
     }));
-  const page = Math.max(
-    1,
-    Math.min(Number.parseInt(req.query.page, 10) || 1, 100000),
-  );
+  const page = Number(req.query.page || 1);
+  if (!Number.isSafeInteger(page) || page < 1 || page > 500)
+    throw fail(
+      400,
+      "Page must be an integer between 1 and 500. Refine your search for more results.",
+    );
   const [players, total, groups] = await Promise.all([
     Player.find(filter)
       .select("name phone registrationId roles status createdAt")
       .sort({ name: 1, _id: 1 })
       .skip((page - 1) * 20)
       .limit(20)
+      .maxTimeMS(2000)
       .lean(),
-    Player.countDocuments(filter),
-    Player.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    Player.countDocuments(filter).maxTimeMS(2000),
+    Player.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]).option({ maxTimeMS: 2000 }),
   ]);
   res.json({
     players,
