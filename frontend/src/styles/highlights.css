@@ -1,0 +1,141 @@
+.season-highlights {
+  padding-block: 82px;
+  border-top: 1px solid var(--border);
+}
+
+.season-highlights .section-heading {
+  align-items: center;
+}
+
+.season-highlights .section-heading > p {
+  max-width: 355px;
+  font-size: 15px;
+}
+
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+}
+
+.highlight-card {
+  margin: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.highlight-photo {
+  display: block;
+  position: relative;
+  background: #0c100d;
+}
+
+.highlight-photo img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+}
+
+.highlight-season,
+.highlight-expand {
+  position: absolute;
+  background: #101512e8;
+  color: var(--text);
+  border: 1px solid #ffffff30;
+  border-radius: 4px;
+}
+
+.highlight-season {
+  top: 16px;
+  left: 16px;
+  padding: 7px 11px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+.highlight-expand {
+  bottom: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+.highlight-photo:hover .highlight-expand,
+.highlight-photo:focus-visible .highlight-expand {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.highlight-card figcaption {
+  padding: 23px 25px;
+}
+
+.highlight-card h3 {
+  font: 600 29px/1.15 var(--heading);
+  letter-spacing: 0;
+  margin: 0 0 8px;
+}
+
+.highlight-card figcaption p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .season-highlights {
+    padding-block: 60px;
+  }
+
+  .season-highlights .section-heading {
+    display: block;
+  }
+
+  .season-highlights .section-heading > p {
+    max-width: 520px;
+    margin-top: 20px;
+  }
+
+  .highlights-grid {
+    gap: 20px;
+  }
+
+  .highlight-card figcaption {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 580px) {
+  .season-highlights {
+    padding-block: 48px;
+  }
+
+  .highlights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .season-highlights h2 {
+    font-size: 44px;
+  }
+
+  .highlight-card h3 {
+    font-size: 27px;
+  }
+
+  .highlight-season {
+    top: 12px;
+    left: 12px;
+  }
+
+  .highlight-expand {
+    bottom: 12px;
+    right: 12px;
+  }
+}

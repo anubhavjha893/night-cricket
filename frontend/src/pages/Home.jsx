@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Trophy, MapPin, Sun, Moon, ShieldCheck } from "lucide-react";
 import { useApp } from "../hooks/useApp";
+import { SeasonHighlights } from "../components/home/SeasonHighlights";
 
 export function Home() {
   const { config } = useApp();
@@ -122,6 +123,7 @@ export function Home() {
           </span>
         </div>
       </section>
+      <SeasonHighlights />
       <section className="steps-section">
         <div className="wrap">
           <div className="section-heading">
