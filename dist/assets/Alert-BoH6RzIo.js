@@ -1,0 +1,1 @@
+import{c as s,j as t}from"./index-C7YtgbZr.js";const c=s("UserRound",[["circle",{cx:"12",cy:"8",r:"5",key:"1hypcn"}],["path",{d:"M20 21a8 8 0 0 0-16 0",key:"rfgkzh"}]]);function o({children:e,tone:r="error"}){return t.jsx("div",{className:`alert alert-${r}`,role:r==="error"?"alert":"status",children:e})}export{o as A,c as U};

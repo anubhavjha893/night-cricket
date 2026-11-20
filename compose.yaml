@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     ports:
       - "4000:4000"
-    env_file: .env
+    env_file: backend/.env
     environment:
       MONGODB_URI: mongodb://mongo:27017/ugm_cricket
       # Local HTTP Docker preview. For public deployment use HTTPS and production.

@@ -3,43 +3,30 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.12" },
-  "scripts": {
-    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:client": "vite --host 127.0.0.1",
-    "dev:server": "node --watch server/index.js",
-    "dev:database": "node server/local-db.js",
-    "build": "vite build",
-    "start": "node server/index.js",
-    "test": "node --test --test-concurrency=1 tests/api.test.js",
-    "test:browser": "node tests/browser.mjs",
-    "preview": "vite preview --host 127.0.0.1"
+  "engines": {
+    "node": ">=22.12"
   },
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "express-rate-limit": "^8.2.1",
-    "file-type": "^21.0.0",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.468.0",
-    "mongoose": "^9.0.0",
-    "multer": "^2.0.2",
-    "qrcode": "^1.5.4",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6",
-    "zod": "^4.1.12"
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:database": "npm run dev:database --workspace backend",
+    "build": "npm run build --workspace frontend && node scripts/prepare-site.mjs",
+    "start": "npm run start --workspace backend",
+    "test": "npm run test --workspace backend",
+    "test:browser": "node tests/e2e/browser.mjs",
+    "preview": "npm run preview --workspace frontend",
+    "format": "prettier --write frontend/src backend/src backend/scripts backend/tests tests/e2e frontend/vite.config.js scripts"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.1.0",
     "concurrently": "^9.2.1",
-    "mongodb-memory-server": "^10.3.0",
     "playwright": "^1.56.1",
-    "supertest": "^7.1.4",
-    "vite": "^7.2.2"
+    "mongodb-memory-server": "^10.3.0",
+    "mongoose": "^9.0.0",
+    "prettier": "^3.6.2"
   }
 }

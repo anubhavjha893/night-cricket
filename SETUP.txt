@@ -1,79 +1,124 @@
-URMILA GUPTA MEMORIAL CRICKET TOURNAMENT – SEASON 2
-React + Node/Express + MongoDB
+﻿URMILA GUPTA MEMORIAL CRICKET TOURNAMENT - SEASON 2
+React frontend + Express/MongoDB backend (npm workspaces)
 
-LOCAL START (Node 22.12+)
-1. npm install
-2. Copy .env.example to .env if .env does not already exist.
-3. Set JWT_SECRET (32+ random characters), ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters).
-4. Set MONGODB_URI to your local MongoDB or MongoDB Atlas connection string.
-   If MongoDB is not installed, run: npm run dev:database
-   This downloads an official MongoDB binary on its first run and starts a real
-   local database. Its data persists in .data/mongo. Keep that terminal running.
-5. For development, run npm run dev and open http://localhost:5173
-6. For the built application, run npm run build, then npm start.
-   Open http://localhost:4000
+PROJECT STRUCTURE
+frontend/
+  public/assets/            Public images
+  src/
+    components/
+      admin/                Player list, application review and settings
+      common/               Alerts, loading, status badge and private images
+      forms/                Input fields and file upload
+      layout/               Header and footer
+    config/                 Public tournament defaults
+    context/                Application context and provider
+    hooks/                  Shared React hooks
+    pages/                  Home, registration, login and player dashboard
+      admin/                Admin page
+    routes/                 React routes and lazy loading
+    services/               HTTP API client
+    styles/                 Global and application CSS
+    utils/                  Date formatting
+    App.jsx                 Application layout
+    main.jsx                React entry point
+  .env.example              Public VITE_API_URL only
+  package.json              Frontend dependencies and scripts
+  vite.config.js            Frontend development/build config
+  dist/                     Generated React build (ignored)
+backend/
+  src/
+    config/                 Environment, MongoDB, auth and tournament config
+    controllers/            Request handlers grouped by feature
+    middleware/             Auth, security, rate limits, uploads and errors
+    models/                 Player, Admin and Settings mongoose models
+    routes/                 API endpoint definitions by feature
+    services/               Sessions, GridFS files and registration dates
+    utils/                  HTTP errors and ObjectId validation
+    validators/             Zod request schemas
+    app.js                  Express app assembly
+    server.js               Database connection, startup and shutdown
+  scripts/local-db.js        Optional persistent development MongoDB helper
+  tests/api.test.js          MongoDB API integration tests
+  .env                      Private database/admin/session settings (ignored)
+  .env.example              Backend config template
+  package.json              Backend dependencies and scripts
+ tests/e2e/browser.mjs       Desktop/mobile full-stack browser tests
+ scripts/prepare-site.mjs    Copies frontend build for Sites hosting
+ dist/                      Generated Sites artifact; edit frontend/src instead
+ package.json               Workspace commands for both apps
+ package-lock.json          Shared workspace lockfile
+ Dockerfile / compose.yaml  Combined app image / local Docker setup
+ .data/mongo/               Existing persistent local database (ignored)
+
+INSTALL
+Use Node 22.12+ and run npm install from the night-cricket root.
+This installs both workspaces. npm shares node_modules, while dependency
+ownership stays separate in frontend/package.json and backend/package.json.
+
+ENVIRONMENT
+Existing credentials have been preserved in backend/.env.
+For a fresh checkout, copy backend/.env.example to backend/.env and set:
+MONGODB_URI, JWT_SECRET (32+ random characters), ADMIN_EMAIL and
+ADMIN_PASSWORD (12+ characters).
+Copy frontend/.env.example to frontend/.env if you need a custom VITE_API_URL.
+Frontend values are public: never put database/admin secrets there.
+No root .env file is needed.
+
+RUN FROM THE PROJECT ROOT
+npm run dev:database     Start local MongoDB if it is not already running.
+npm run dev              Start Express and Vite together.
+npm run dev:frontend     Start only Vite (http://localhost:5173).
+npm run dev:backend      Start only Express (http://localhost:4000).
+npm run build            Build frontend and prepare the Sites artifact.
+npm start                Serve frontend/dist and API from Express on port 4000.
+
+RUN APPS SEPARATELY
+In frontend/: npm run dev
+In backend/: npm run dev
+Build frontend before using npm start to serve the full app.
+The optional local database helper downloads an official MongoDB binary on first
+run. Data stays in project-root .data/mongo, regardless of the launch directory.
 
 ADMIN
-Open /#/admin. Sign in using ADMIN_EMAIL and ADMIN_PASSWORD from your .env.
-The first server start creates that admin account. Later environment changes
-do not silently overwrite an existing administrator's password.
-Players are sorted by name. Search, filter and select a player to review details,
-the player photograph and payment screenshot. Confirm actual payment receipt
-before approval. Rejection requires a reason. Each decision creates a durable
-in-app notification. Reviewed decisions cannot be overwritten by a second click.
+Open http://localhost:4000/#/admin (or Vite's /#/admin in development).
+Use ADMIN_EMAIL and ADMIN_PASSWORD from backend/.env.
+First server start creates an admin only if that email does not exist.
+Changing environment credentials does not overwrite an existing admin password.
 
-PAYMENT
-Default payee: Anubhav Jha
-UPI: 8210708838sbi@axl
-Amount: INR 150
-The QR is generated from these exact payment details. Admin > Payment & settings
-can update them or upload an existing QR. Verify recipient details in a UPI app
-before collecting real payments. The app does not claim to auto-verify payment.
+PAYMENT AND REGISTRATION
+Payee: Anubhav Jha | UPI: 8210708838sbi@axl | Fee: INR 150.
+Admin > Payment & settings can change the UPI/QR and registration availability.
+The backend enforces 24 Nov to 20 Dec 2026 in India time unless admin explicitly
+opens or closes registration. Organisers verify payment manually.
+Approval/rejection creates an in-app notification. No SMS/WhatsApp is sent.
+Forgotten passwords require organiser assistance; automated recovery and phone
+OTP verification are not configured.
 
-REGISTRATION WINDOW
-24 November 2026 through 20 December 2026, India time.
-The backend enforces these dates. Admin > Payment & settings can explicitly
-open registration early or close it. Test runs use isolated databases and do
-not change live registration settings.
+STORAGE
+Records and images are stored in MongoDB; images use GridFS.
+Private images require a player-owner or administrator session.
+Uploads accept verified JPEG/PNG/WebP images up to 5 MB each.
+Passwords are hashed and sessions use HttpOnly signed cookies.
+Keep production MongoDB private and configure backups.
 
-PLAYER FLOW
-Personal details > Player profile > Animated payment QR > Payment proof > Pending.
-Players create a password and sign in with their mobile number to track status.
-The dashboard refreshes every 15 seconds while visible. Approval and rejection
-notifications remain available after signing out. No SMS or WhatsApp is sent.
-If a player forgets their password, they must contact the organiser. Automated
-password recovery and phone OTP verification are not configured.
+DOCKER
+Create backend/.env, then run docker compose up --build from the root.
+Open http://localhost:4000. Data stays in the tournament-data Docker volume.
+Compose is for local HTTP. Public deployment needs HTTPS, NODE_ENV=production,
+the exact APP_ORIGIN and an appropriate TRUST_PROXY setting.
 
-STORAGE AND PRIVACY
-Application data and original image uploads are stored in MongoDB (GridFS).
-Photos and receipts require an authenticated owner or administrator session.
-Each image is limited to 5 MB and is checked for JPEG, PNG or WebP file content.
-Passwords are bcrypt-hashed. Sessions use HttpOnly signed cookies. Admin routes
-require server-side administrator authorisation. Do not expose MongoDB directly
-to the public internet. Configure database backups and access restrictions.
+DEPLOYMENT
+Deploy the root Dockerfile or root npm build/start commands to a Node-capable host.
+Provide production environment variables and a persistent MongoDB connection.
+Express serves the frontend build and API on the same origin by default.
+For separate hosting set frontend/.env VITE_API_URL before building and set
+backend APP_ORIGIN to the exact frontend origin. Cross-site cookies require
+production HTTPS and COOKIE_SAME_SITE=none, subject to browser restrictions.
+The Sites host serves only the static React preview, not Express/MongoDB.
+Root dist/ is a generated copy because Sites requires its artifact there.
 
-DOCKER LOCAL OPTION
-Set .env credentials, then run docker compose up --build.
-Open http://localhost:4000. Database data is retained in the named Docker volume.
-The included Compose file is for local HTTP use. It deliberately uses development
-cookie settings. Public deployments must use HTTPS and NODE_ENV=production.
-
-PUBLIC DEPLOYMENT
-Deploy this repository's Dockerfile or npm build/start commands to a Node-capable
-host and provide MONGODB_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, NODE_ENV=
-production, APP_ORIGIN=https://your-domain and the correct TRUST_PROXY value.
-Serve the React build and Express API on the same origin (recommended).
-No separate frontend build-time API URL is needed for this deployment.
-
-The previous ChatGPT Sites host supports the React static build but does not run
-this Express/MongoDB backend. A static-only deployment displays a clear service
-unavailable message and never simulates successful submissions or approvals.
-For a separately hosted frontend set VITE_API_URL=https://your-api-domain before
-building; allow its exact origin in APP_ORIGIN and configure COOKIE_SAME_SITE=none
-with production HTTPS cookies. Cross-site browser cookie restrictions can still
-apply, so the single-origin deployment is preferred.
-
-VERIFICATION
-npm test             Real MongoDB API integration tests in an isolated database.
-npm run test:browser Browser walkthrough using the installed Microsoft Edge.
-npm run build        Production React build.
+CHECKS
+npm test                 Backend tests using isolated MongoDB.
+npm run test:browser     Desktop/mobile browser flow (installed Edge).
+npm run build            Production frontend and hosting artifact.
+npm run format           Format frontend, backend, scripts and tests.
