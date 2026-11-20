@@ -3,6 +3,8 @@ import { Admin, Player } from "../models/index.js";
 import { fail } from "../utils/http-error.js";
 import { idIsValid } from "../utils/object-id.js";
 import { SESSION_COOKIE } from "../config/auth.js";
+import { sessionDigest } from '../services/session.service.js';
+import { RevokedSession } from '../models/RevokedSession.js';
 
 export function createAuthMiddleware(env) {
   async function requireUser(req, res, next) {
@@ -18,6 +20,7 @@ export function createAuthMiddleware(env) {
     }
     if (!idIsValid(payload.sub) || !["player", "admin"].includes(payload.role))
       throw fail(401, "Please sign in again.");
+    if(await RevokedSession.exists({_id:sessionDigest(req.cookies[SESSION_COOKIE])}).maxTimeMS(1000))throw fail(401,'Your session has ended. Please sign in again.');
     const user = await (payload.role === "admin" ? Admin : Player).findById(
       payload.sub,
     );

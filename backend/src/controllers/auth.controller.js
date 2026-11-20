@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { Admin, Player } from "../models/index.js";
 
 import { fail } from "../utils/http-error.js";
+import { SESSION_COOKIE } from '../config/auth.js';
 
 export function createAuthController(session) {
   async function loginPlayer(req, res) {
@@ -45,8 +46,8 @@ export function createAuthController(session) {
     res.json({ role: "admin", email: admin.email });
   }
 
-  function logout(req, res) {
-    session.clearSession(res);
+  async function logout(req, res) {
+    await session.clearSession(res,req.cookies[SESSION_COOKIE]);
     res.json({ ok: true });
   }
   function getSession(req, res) {

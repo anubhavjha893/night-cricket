@@ -1,17 +1,20 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { Player, Admin, Settings } from "../models/index.js";
+import { RateCounter } from '../models/RateCounter.js';
+import { RevokedSession } from '../models/RevokedSession.js';
 
 export async function connectDatabase(env) {
   if (!env.MONGODB_URI)
     throw new Error(
       "Set MONGODB_URI in backend/.env before starting the server.",
     );
-  await mongoose.connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+  mongoose.set('bufferCommands',false);
+  await mongoose.connect(env.MONGODB_URI,{serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000,maxPoolSize:20,minPoolSize:0,maxConnecting:2,waitQueueTimeoutMS:2000,maxTimeMS:2000});
 }
 
 export async function initializeDatabase(env) {
-  await Promise.all([Player.init(), Admin.init(), Settings.init()]);
+  await Promise.all([Player.init(), Admin.init(), Settings.init(),RateCounter.init(),RevokedSession.init()]);
   await Settings.updateOne(
     { _id: "tournament" },
     {

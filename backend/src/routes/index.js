@@ -8,6 +8,7 @@ import { createRegistrationRouter } from "./registration.routes.js";
 import { createPlayerRouter } from "./player.routes.js";
 import { createFileRouter } from "./file.routes.js";
 import { createAdminRouter } from "./admin.routes.js";
+import {createWorkGate} from '../middleware/work-limit.middleware.js';
 
 export function createApiRouter({ env, now }) {
   const router = Router();
@@ -16,7 +17,8 @@ export function createApiRouter({ env, now }) {
     now,
     session: createSessionService(env),
     requireUser: createAuthMiddleware(env),
-    loginLimiter: createLoginLimiter(),
+    loginLimiter:createLoginLimiter({env}),
+    workGate:createWorkGate(4).middleware,
   };
   router.use(createTournamentRouter(context));
   router.use("/auth", createAuthRouter(context));
