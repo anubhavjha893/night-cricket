@@ -1,0 +1,124 @@
+{
+  "checkedAt": "2026-11-20T09:30:51.227Z",
+  "base": "https://ugm-cricket-season-2.vercel.app",
+  "checks": [
+    {
+      "name": "Public homepage renders and Season 1 photographs load",
+      "passed": true
+    },
+    {
+      "name": "Live readiness, payment configuration and PNG QR",
+      "passed": true
+    },
+    {
+      "name": "Anonymous admin access is rejected",
+      "passed": true
+    },
+    {
+      "name": "Admin uses email; login cookie survives Vercel-to-Render proxy",
+      "passed": true
+    },
+    {
+      "name": "Admin can read applications/settings; cross-site changes rejected",
+      "passed": true
+    },
+    {
+      "name": "UI logout revokes the captured session",
+      "passed": true
+    },
+    {
+      "name": "Mobile homepage and registration availability render without JS errors",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "path": "/api/ready",
+      "status": 200,
+      "elapsedMs": 491
+    },
+    {
+      "path": "/api/config",
+      "status": 200,
+      "elapsedMs": 300
+    },
+    {
+      "path": "/api/payment/qr",
+      "status": 200,
+      "elapsedMs": 492
+    }
+  ],
+  "label": "verified live: low-volume smoke; no registration or payment writes",
+  "registration": {
+    "isOpen": false,
+    "message": "Registration opens on 24 November 2026."
+  },
+  "serverMetrics": {
+    "startedAt": "2026-11-20T09:25:39.398Z",
+    "window": "p95 of last 2048 requests per route; totals since process start",
+    "rssBytes": 96284672,
+    "routes": {
+      "other": {
+        "requests": 2,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 4.64
+      },
+      "/api/ready": {
+        "requests": 81,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 71.41
+      },
+      "/api/auth/me": {
+        "requests": 19,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 198.34
+      },
+      "/api/config": {
+        "requests": 16,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 168.57
+      },
+      "/api/payment/qr": {
+        "requests": 4,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 818.06
+      },
+      "/api/admin/players": {
+        "requests": 10,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 329.76
+      },
+      "/api/admin/login": {
+        "requests": 3,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 1801.26
+      },
+      "/api/admin/settings": {
+        "requests": 3,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 261.36
+      },
+      "/api/auth/logout": {
+        "requests": 5,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 136.46
+      },
+      "/api/admin/metrics": {
+        "requests": 2,
+        "serverErrors": 0,
+        "rateLimited": 0,
+        "p95Ms": 199.42
+      }
+    }
+  },
+  "passed": true
+}

@@ -1,4 +1,7 @@
 PRODUCTION ROLLOUT AND ROLLBACK
+Historical pre-cloud audit decision below. For the subsequently authorised
+Render/Vercel deployment, verified releases and current limits, see
+../cloud/ROLLOUT.txt and ../cloud/live-smoke.json.
 Date: 20 November 2026 (Asia/Kolkata)
 
 RELEASE GATE / CURRENT DECISION

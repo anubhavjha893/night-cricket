@@ -1,0 +1,102 @@
+CLOUD DEPLOYMENT RECEIPT - 20 NOVEMBER 2026 (ASIA/KOLKATA)
+
+TARGETS AND RELEASES ACTUALLY VERIFIED LIVE
+Frontend: https://ugm-cricket-season-2.vercel.app
+Organiser login: https://ugm-cricket-season-2.vercel.app/#/admin
+Player registration: https://ugm-cricket-season-2.vercel.app/#/register
+Backend readiness: https://ugm-cricket-api.onrender.com/api/ready
+GitHub: https://github.com/anubhavjha893/night-cricket
+Vercel project: ugm-cricket-season-2 / anubhav-jhas-projects-f3a17395
+Verified Vercel deployment: dpl_9SggDHwTDBrpfFRYtrrc4qE33qTy
+Verified frontend source: c907348 (integration configuration).
+Render workspace: My Workspace, explicitly confirmed by the owner.
+Render service: srv-dc013qh42hec738cnma0, Singapore, free, one instance.
+Verified Render deployment: dep-dc013r142hec738cnnrg, status live.
+Verified backend source: 393d69ab255b6035fc0f059d7c7286cb289586fe.
+The later frontend commit changes only vercel.json, not backend application code.
+
+CONFIGURATION
+Render has Atlas MONGODB_URI for database ugm_cricket, a generated independent
+JWT_SECRET, existing organiser ADMIN_EMAIL/ADMIN_PASSWORD, production NODE_ENV,
+exact HTTPS APP_ORIGIN, payment payee/UPI configuration, secure lax cookies,
+REQUEST_LOGS=true, TRUST_PROXY=0 and PASSWORD_SCHEME_ENABLED=false.
+Node 22 is configured on both platforms. No database or admin credentials are
+placed in frontend variables. Vercel VITE_API_URL is empty in production,
+preview and development; /api/* is forwarded to Render by vercel.json.
+Cookies therefore remain on the website's origin. Sensitive responses use
+no-store, and the frontend adds CSP, framing and MIME protections.
+Local deployment credentials are in ignored .env.deploy. .vercelignore excludes
+secrets, local MongoDB files, tools, dependencies and test results from uploads.
+The Render Blueprint passed Render's authenticated validation API (valid=true).
+Render's Windows executable was blocked by OS Application Control; deployment
+used its supported HTTPS API instead. No OS policy was changed.
+
+VERIFICATION AND BEFORE/AFTER
+                                         Before integration     Verified live
+Vercel /api/ready                         404                    200, ok=true
+Vercel /api/config                        unavailable            200, exact fee/UPI/dates
+Admin browser sign-in and API session    unavailable            passed
+Anonymous /api/admin/players             unavailable            401
+Untrusted-origin signed-in logout        unavailable            403
+Captured session after UI logout         unavailable            401
+Season 1 photos / desktop and mobile     frontend deployed      passed
+Browser JavaScript exceptions            not measured           none in final smoke
+
+Final low-volume smoke: 7/7 checks pass; see live-smoke.json for timestamp,
+individual checks and protected per-route metrics. One readiness/config/QR
+sample each took 491/300/492 ms end-to-end from the test machine. These three
+samples are not a production p95, throughput test, or capacity estimate.
+The protected server metrics snapshot reported 0 server errors and about
+92 MiB RSS. Login/logout checks create/revoke organiser sessions only; no
+player was registered, no payment was made and no application was approved.
+Earlier smoke attempts exposed test-harness assumptions (path URLs versus the
+app's existing HashRouter, and lazy-loaded notice timing); the final checks use
+the actual /#/admin and /#/register flows. One browser navigation also needed
+a retry after a connection reset. These were not represented as passing runs.
+
+Verified locally: npm test 27/27, focused security/client suite 18/18 (the
+security subset overlaps npm test), and frontend production build passed.
+Existing isolated load evidence and security findings remain in
+reports/security/REVIEW.txt and its baseline/after JSON files. No live load test
+was run. Highest isolated load verified previously: 20 journeys at 1/sec plus
+100 QR requests at 10/sec, bounded at four in flight. Real multi-host capacity,
+production peak traffic, CDN/WAF controls, Atlas backup restoration and
+database-user privilege scope remain unverified.
+
+OPERATING LIMITS
+Registration intentionally opens 24 November and closes after 20 December 2026
+in India time. The live registration page clearly explains the opening date.
+Submission and approval/notification behavior were verified with synthetic data
+locally; live player submission remains unverified while the window is closed.
+Do not open registration early solely to perform a production test.
+Render free instances sleep after 15 idle minutes and can take about one minute
+to wake. The frontend's bounded API timeout can expire during that cold start;
+retry after the service wakes. Free instance hours are shared across the Render
+workspace. This deployment does not establish production uptime or peak-load
+assurance. Use an owner-approved paid always-on plan before requiring that.
+Client forwarding headers are not trusted without verified proxy IP ranges;
+TRUST_PROXY=0 prevents spoofing but multiple visitors may share the ingress IP
+and its limits. Exact trusted ingress ranges/identity require host verification.
+Password scheme remains in compatible phase 1; enable phase 2 consistently only
+after all previous backend instances are drained, per the security rollout guide.
+Atlas and Render credentials supplied in chat should be rotated by the owner;
+update the corresponding provider secrets and redeploy after rotation.
+
+DEPLOYMENT AND ROLLBACK
+Vercel is linked to GitHub main; pushes can deploy automatically. Render auto
+deploy is off, so backend changes require a deliberate deploy after tests.
+Future releases should stage Vercel production builds with --prod --skip-domain,
+test them, then promote. Gate release on readiness 200, 100% dedicated smoke-flow
+success and no new 5xx. Monitor meaningful host-specific p95 and error-rate
+windows before making production performance claims; no live traffic baseline
+existed for the previously absent backend.
+Use the Render dashboard's rollback action to a known healthy deploy. This is
+the first backend release, so it has no earlier healthy backend rollback target;
+retain this deployment as the first fallback. Do not roll back to a static-only
+frontend when availability of registration is required. Vercel can roll back to
+dpl_9SggDHwTDBrpfFRYtrrc4qE33qTy once a later release exists. Keep Render URL and
+APP_ORIGIN unchanged, preserve additive indexes/collections, and do not restore
+an old database snapshot over new registrations. Repeat readiness, admin login,
+settings/list reads and revoked-session checks after a rollback.
+Manual smoke rerun: node tests/security/cloud-smoke.mjs (requires ignored
+.env.deploy containing authorised organiser credentials; never run as load).
