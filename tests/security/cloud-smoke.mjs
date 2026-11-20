@@ -120,6 +120,52 @@ try {
     (c) => c.name === "ugm_session",
   );
   await check(
+    "Admin auction settings and manual WhatsApp chooser render without sending",
+    async () => {
+      await page
+        .getByRole("button", { name: "Payment & settings", exact: true })
+        .click();
+      await page.locator("#auctionDate").waitFor();
+      const settings = await (
+        await context.request.get(base + "/api/admin/settings")
+      ).json();
+      assert.equal(
+        await page.locator("#auctionDate").inputValue(),
+        settings.auctionDate || "",
+      );
+      await page
+        .getByRole("button", { name: "Player registrations", exact: true })
+        .click();
+      await page.locator(".player-list-panel").waitFor();
+      await page
+        .locator(".player-list-panel .loading")
+        .waitFor({ state: "hidden" });
+      const button = page
+        .getByRole("button", { name: /^Send WhatsApp message to / })
+        .first();
+      // Existing real rows are read-only here. Never choose a template or follow a chat link.
+      if (await button.count()) {
+        await button.click();
+        const dialog = page.getByRole("dialog");
+        await dialog
+          .getByRole("button", { name: "Registration Approved", exact: true })
+          .waitFor();
+        await dialog
+          .getByRole("button", { name: "Registration Rejected", exact: true })
+          .waitFor();
+        assert.equal(
+          await dialog
+            .getByRole("link", { name: "Open WhatsApp", exact: true })
+            .count(),
+          0,
+        );
+        await dialog
+          .getByRole("button", { name: "No, not right now", exact: true })
+          .click();
+      }
+    },
+  );
+  await check(
     "Admin can read applications/settings; cross-site changes rejected",
     async () => {
       assert.equal(

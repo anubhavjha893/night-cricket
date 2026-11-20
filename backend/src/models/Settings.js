@@ -7,6 +7,7 @@ const settingsSchema = new Schema(
     payeeName: { type: String, default: "Anubhav Jha" },
     upiId: { type: String, default: "8210708838sbi@axl" },
     qrFileId: Schema.Types.ObjectId,
+    auctionDate: { type: String, default: "" },
     registrationMode: {
       type: String,
       enum: ["scheduled", "open", "closed"],

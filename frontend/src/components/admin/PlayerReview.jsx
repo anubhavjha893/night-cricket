@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X, Check, ShieldCheck } from "lucide-react";
+import { X, Check, ShieldCheck, MessageCircle } from "lucide-react";
 import { api } from "../../services/api";
 import { Alert } from "../../components/common/Alert";
 import { formatDate } from "../../utils/formatDate";
@@ -10,7 +10,7 @@ import { Field } from "../../components/forms/Field";
 
 import { PrivateImage } from "../../components/common/PrivateImage";
 
-export function PlayerReview({ id, onClose, onDecision }) {
+export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
   const [player, setPlayer] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -19,7 +19,9 @@ export function PlayerReview({ id, onClose, onDecision }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   async function load() {
-    setPlayer(await api(`/admin/players/${id}`));
+    const updated = await api(`/admin/players/${id}`);
+    setPlayer(updated);
+    return updated;
   }
   useEffect(() => {
     let active = true;
@@ -56,9 +58,9 @@ export function PlayerReview({ id, onClose, onDecision }) {
         method: "PATCH",
         body: { status, reason },
       });
-      await load();
+      const updated = await load();
       setSuccess(result.message);
-      onDecision();
+      onDecision({ player: updated, status });
     } catch (error) {
       setError(error.message);
       if (error.status === 409) {
@@ -106,7 +108,14 @@ export function PlayerReview({ id, onClose, onDecision }) {
             <div>
               <dt>Mobile number</dt>
               <dd>
-                <a href={`tel:+91${player.phone}`}>{player.phone}</a>
+                <a href={`tel:${player.phone}`}>{player.phone}</a>
+                <button
+                  type="button"
+                  className="whatsapp-row-button review-whatsapp-button"
+                  onClick={() => onWhatsApp(player)}
+                >
+                  <MessageCircle size={15} /> Send message
+                </button>
               </dd>
             </div>
             <div>

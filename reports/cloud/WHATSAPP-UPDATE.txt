@@ -1,0 +1,78 @@
+MANUAL WHATSAPP MESSAGES - 20 NOVEMBER 2026
+
+ADMIN FLOW
+Every registration row has a WhatsApp button next to its phone number. It opens
+a compact modal with Registration Approved / Registration Rejected choices.
+Select a choice to preview the personalised draft, then explicitly Open WhatsApp.
+Player details also provide a Send message action. A successful approval or
+rejection offers the matching draft automatically in a confirmation modal;
+No, not right now / Escape closes the modal without undoing that saved decision.
+Selecting a message from the list never changes the registration status.
+
+The modal follows the site's colours, blurs its backdrop, traps keyboard focus,
+restores focus on dismissal and fits desktop/mobile screens. An unset auction
+date is clearly shown as Jald announce ki jayegi; an actual date is never invented.
+Admin > Payment & settings > Auction date persists a validated calendar date in
+MongoDB. Older settings clients that omit the field preserve the saved date.
+Admin middleware protects settings reads/writes; players and anonymous callers
+cannot set the date. Existing approval/rejection and in-app notifications remain.
+
+APPROVAL DRAFT (personalised from registration and tournament data)
+Namaste {name}, congratulations! {tournamentName} mein aapka registration
+successfully verify aur approve ho gaya hai.
+Auction date: {admin-configured auction date}.
+Auction ke baad aapko aapki team aur team owner ki details bata di jayengi.
+-- Tournament Organising Committee
+
+REJECTION DRAFT
+Namaste {name}, {tournamentName} ke liye aapka registration approve nahi ho saka,
+kyunki aapka payment receive/verify nahi hua hai ya payment screenshot sahi ya
+saaf nahi hai.
+Kripya apna payment check karke sahi aur readable payment screenshot organiser
+ko WhatsApp par bhejein, taaki dobara verification ki ja sake. Sahayata ke liye
+organiser se sampark karein.
+-- Tournament Organising Committee
+
+MANUAL SENDING AND NUMBER VALIDATION
+Only https://wa.me/<international-number>?text=<URL-encoded-message> is used.
+No WhatsApp Business API, paid service, automatic sending or bulk workflow.
+The organiser presses Send in their own WhatsApp account. Opening a draft does
+not write a sent/delivered status or create an additional in-app notification.
+10-digit Indian numbers gain 91 once; already-prefixed 91, +91, 0091 numbers
+are normalized without duplication. Spaces, parentheses and hyphens are accepted.
+Invalid numbers show a clear error and no Open WhatsApp link.
+Names, tournament name/season and special characters are encoded into the URL.
+Reference: https://faq.whatsapp.com/5913398998672934
+
+FILES
+Frontend: components/admin/Players.jsx, PlayerReview.jsx, AdminSettings.jsx,
+new WhatsAppMessageDialog.jsx; new utils/whatsapp.js and styles/whatsapp.css.
+Backend: models/Settings.js, validators/payment.schema.js,
+controllers/settings.controller.js. All paths live under their frontend/src
+or backend/src directories. package.json includes the new tests; dist contains
+the rebuilt static artifact.
+
+LOCAL EVIDENCE
+30 backend/API/security tests and 4 WhatsApp number/template unit tests passed.
+Production build and public-build secret scan passed.
+Existing full registration/browser flow passed with the optional prompt skipped.
+Dedicated WhatsApp browser tests passed: both templates, persistent auction date,
+prefixed and invalid phones, focus trap/restoration, blurred backdrop, desktop/
+mobile layouts, optional post-approval/rejection prompts, cancellation without
+status rollback, and explicit link navigation. Every WhatsApp navigation was
+intercepted locally; zero requests or messages went to real WhatsApp recipients.
+Screenshots/results are in ignored test-results/whatsapp/. Synthetic test dates
+are not actual tournament dates. Current production settings are not overwritten.
+
+ROLLOUT / ROLLBACK
+Deploy the backward-compatible backend on a release branch before publishing
+the corresponding frontend on main. No destructive database migration or new
+credentials are required. Live smoke checks only read settings and optionally
+open/dismiss the chooser; they never follow a real WhatsApp link or review a
+real registration. Exact final releases are recorded in ignored
+test-results/cloud/final-release.json and live smoke in cloud/smoke.json there.
+Previous healthy backend: dep-dc01ncjm8hqs7399t980.
+Previous healthy frontend: dpl_6qm97adSELEmTiNiVdaRddHgaW3W.
+To revert, restore the previous frontend first, then the backend as needed.
+Keep the additive auctionDate field; do not restore/drop player data. Older
+settings writes omit the date and leave it untouched after this update.

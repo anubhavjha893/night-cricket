@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Users,
   Clock3,
@@ -7,6 +7,7 @@ import {
   Search,
   RefreshCw,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { api } from "../../services/api";
 import { Alert } from "../../components/common/Alert";
@@ -15,6 +16,7 @@ import { Loading } from "../../components/common/Loading";
 import { StatusBadge } from "../../components/common/StatusBadge";
 
 import { PlayerReview } from "./PlayerReview";
+import { WhatsAppMessageDialog } from "./WhatsAppMessageDialog";
 
 export function Players() {
   const [result, setResult] = useState(null);
@@ -25,6 +27,8 @@ export function Players() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [whatsappContact, setWhatsappContact] = useState(null);
+  const closeWhatsApp = useCallback(() => setWhatsappContact(null), []);
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
@@ -141,7 +145,7 @@ export function Players() {
           ) : result?.players.length ? (
             <div className="player-list">
               {result.players.map((player) => (
-                <button
+                <div
                   className={`player-row ${selected === player._id ? "selected" : ""}`}
                   onClick={() => setSelected(player._id)}
                   key={player._id}
@@ -153,17 +157,35 @@ export function Players() {
                       .map((word) => word[0])
                       .join("")}
                   </span>
-                  <span className="player-row-name">
-                    <strong>{player.name}</strong>
-                    <small>
-                      {player.phone} · {player.roles.join(" / ")}
-                    </small>
+                  <div className="player-row-name">
+                    <button
+                      type="button"
+                      className="player-select-button"
+                      onClick={() => setSelected(player._id)}
+                    >
+                      <strong>{player.name}</strong>
+                    </button>
+                    <div className="player-contact-line">
+                      <small>{player.phone}</small>
+                      <button
+                        type="button"
+                        className="whatsapp-row-button"
+                        aria-label={`Send WhatsApp message to ${player.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setWhatsappContact({ player });
+                        }}
+                      >
+                        <MessageCircle size={15} /> WhatsApp
+                      </button>
+                    </div>
+                    <small>{player.roles.join(" / ")}</small>
                     <small className="registration-ref">
                       {player.registrationId}
                     </small>
-                  </span>
+                  </div>
                   <StatusBadge status={player.status} />
-                </button>
+                </div>
               ))}
             </div>
           ) : (
@@ -203,7 +225,11 @@ export function Players() {
           <PlayerReview
             id={selected}
             onClose={() => setSelected("")}
-            onDecision={() => setRefreshKey((value) => value + 1)}
+            onDecision={(decision) => {
+              setRefreshKey((value) => value + 1);
+              if (decision?.player) setWhatsappContact(decision);
+            }}
+            onWhatsApp={(player) => setWhatsappContact({ player })}
           />
         ) : (
           <div className="panel select-player">
@@ -216,6 +242,12 @@ export function Players() {
           </div>
         )}
       </div>
+      {whatsappContact && (
+        <WhatsAppMessageDialog
+          contact={whatsappContact}
+          onClose={closeWhatsApp}
+        />
+      )}
     </>
   );
 }

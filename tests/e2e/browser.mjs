@@ -155,7 +155,9 @@ try {
   await admin
     .getByRole("button", { name: "Open admin panel", exact: true })
     .click();
-  await admin.getByRole("button", { name: /Browser Test Player/ }).click();
+  await admin
+    .getByRole("button", { name: "Browser Test Player", exact: true })
+    .click();
   await admin.getByText("Payment verification", { exact: false }).waitFor();
   await admin.locator(".payment-proof img").waitFor();
   await admin.screenshot({
@@ -179,6 +181,10 @@ try {
   await admin.getByRole("checkbox", { name: /I have verified/ }).check();
   await admin
     .getByRole("button", { name: "Approve registration", exact: true })
+    .click();
+  await admin.getByRole("dialog").waitFor();
+  await admin
+    .getByRole("button", { name: "No, not right now", exact: true })
     .click();
   await admin
     .getByText("Player details and payment approved.", { exact: false })

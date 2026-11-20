@@ -14,7 +14,7 @@ export async function updateSettings(req, res) {
   const result = paymentSettingsSchema.safeParse(req.body);
   if (!result.success)
     return res.status(400).json({
-      message: "Check your payment and registration settings.",
+      message: "Check your payment, registration and auction settings.",
       errors: result.error.flatten().fieldErrors,
     });
   const old = await Settings.findById("tournament");
@@ -30,6 +30,9 @@ export async function updateSettings(req, res) {
       upiId: result.data.upiId,
       registrationMode: result.data.registrationMode,
     };
+    // Older clients omit this field; keep the saved auction date in that case.
+    if (result.data.auctionDate !== undefined)
+      update.auctionDate = result.data.auctionDate;
     if (newFileId) update.qrFileId = newFileId;
     const query = { $set: update };
     if (!newFileId && result.data.removeQr === "true")

@@ -309,6 +309,48 @@ test("admin list is alphabetic, filterable and paginated; search treats regex ch
   assert.equal(empty.body.total, 0);
 });
 
+test("auction date is admin-only, validates calendar dates and survives older settings clients", async () => {
+  const current = (await admin.get("/api/admin/settings").expect(200)).body;
+  const fields = {
+    payeeName: current.payeeName,
+    upiId: current.upiId,
+    registrationMode: current.registrationMode,
+  };
+  await request(app)
+    .put("/api/admin/settings")
+    .send({ ...fields, auctionDate: "2026-12-23" })
+    .expect(401);
+  const player = request.agent(app).set("Origin", "http://localhost:5173");
+  await register(player);
+  await player
+    .put("/api/admin/settings")
+    .send({ ...fields, auctionDate: "2026-12-23" })
+    .expect(403);
+  await admin
+    .put("/api/admin/settings")
+    .send({ ...fields, auctionDate: "2026-12-23" })
+    .expect(200);
+  assert.equal(
+    (await admin.get("/api/admin/settings")).body.auctionDate,
+    "2026-12-23",
+  );
+  for (const auctionDate of ["2026-02-30", "invalid", "2026-13-01"])
+    await admin
+      .put("/api/admin/settings")
+      .send({ ...fields, auctionDate })
+      .expect(400);
+  await admin.put("/api/admin/settings").send(fields).expect(200);
+  assert.equal(
+    (await admin.get("/api/admin/settings")).body.auctionDate,
+    "2026-12-23",
+  );
+  await admin
+    .put("/api/admin/settings")
+    .send({ ...fields, auctionDate: "" })
+    .expect(200);
+  assert.equal((await admin.get("/api/admin/settings")).body.auctionDate, "");
+});
+
 test("admin can update the payment QR and registration availability; cross-origin writes are blocked", async () => {
   await admin
     .put("/api/admin/settings")

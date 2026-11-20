@@ -35,6 +35,7 @@ export function AdminSettings() {
         body.append(key, settings[key]),
       );
       body.append("removeQr", String(removeQr));
+      body.append("auctionDate", settings.auctionDate || "");
       if (qr) body.append("paymentQr", qr);
       const result = await api("/admin/settings", { method: "PUT", body });
       setSettings(result.settings);
@@ -43,7 +44,7 @@ export function AdminSettings() {
       setSuccess("Payment and registration settings saved.");
       await refreshConfig();
     } catch (error) {
-      setError(error.message);
+      setError(error.errors?.auctionDate?.[0] || error.message);
     } finally {
       setBusy(false);
     }
@@ -52,7 +53,7 @@ export function AdminSettings() {
     <div className="settings-layout">
       <div className="panel settings-panel">
         <h2>
-          <Settings2 size={22} /> Payment & registration settings
+          <Settings2 size={22} /> Payment, registration & auction settings
         </h2>
         <p>
           Keep the recipient details accurate. Players see this QR during the
@@ -114,6 +115,14 @@ export function AdminSettings() {
                 <option value="closed">Close registration</option>
               </select>
             </Field>
+            <Field
+              id="auctionDate"
+              label="Auction date"
+              type="date"
+              value={settings.auctionDate || ""}
+              onChange={set("auctionDate")}
+              hint="Used in WhatsApp approval messages. Leave blank to say the date will be announced soon."
+            />
             <button className="button" disabled={busy}>
               <Save size={17} /> {busy ? "Saving…" : "Save settings"}
             </button>
@@ -137,8 +146,8 @@ export function AdminSettings() {
           <p>Add a UPI ID or upload the verified payment QR.</p>
         )}
         <p className="small-note">
-          In-app notifications are enabled. SMS and WhatsApp messages are not
-          sent.
+          In-app notifications are enabled. WhatsApp buttons open a chat draft;
+          you send the message yourself from your own WhatsApp account.
         </p>
       </aside>
     </div>
