@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { paymentQr } from "../services/qr.service.js";
 import { Settings } from "../models/Settings.js";
 import { tournament } from "../config/tournament.js";
@@ -7,9 +6,7 @@ import { sendImage } from "../services/file.service.js";
 import { fail } from "../utils/http-error.js";
 
 export function getHealth(req, res) {
-  const ready =
-    mongoose.connection.readyState === 1 && !req.app.locals.draining;
-  res.status(ready ? 200 : 503).json({ ok: ready });
+  res.status(200).type("text/plain").send("health is good");
 }
 
 export function createTournamentController({ now }) {

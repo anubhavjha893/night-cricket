@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/error.middleware.js";
 import { createApiRouter } from "./routes/index.js";
 import mongoose from "mongoose";
 import { createObservability } from "./middleware/observability.middleware.js";
+import { getHealth } from "./controllers/tournament.controller.js";
 
 export function createApp({ env = process.env, now = () => new Date() } = {}) {
   if (!env.JWT_SECRET || env.JWT_SECRET.length < 32)
@@ -18,10 +19,14 @@ export function createApp({ env = process.env, now = () => new Date() } = {}) {
   const observation = createObservability(env);
   app.locals.observation = observation;
   app.use(observation.middleware);
-  app.use(["/api/live", "/api/ready"], (req, res, next) => {
-    res.set("Cache-Control", "no-store");
-    next();
-  });
+  app.use(
+    ["/health", "/api/health", "/api/live", "/api/ready"],
+    (req, res, next) => {
+      res.set("Cache-Control", "no-store");
+      next();
+    },
+  );
+  app.get(["/health", "/api/health"], getHealth);
   app.get("/api/live", (req, res) => res.json({ ok: true }));
   let readinessPromise,
     readinessAt = 0;

@@ -64,7 +64,7 @@ export function Login({ admin = false }) {
           <p>
             {admin
               ? "Only authorised organisers can review applications and access payment proofs."
-              : "Use the mobile number and password you chose during registration."}
+              : "For new registrations, your mobile number is also your password. Existing players can keep using their previous password."}
           </p>
         </div>
       </div>

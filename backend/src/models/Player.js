@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { randomUUID } from "node:crypto";
 
 const { Schema } = mongoose;
 const notification = new Schema({
@@ -30,7 +31,15 @@ const playerSchema = new Schema(
     passwordScheme: { type: String, enum: ["sha256-bcrypt-v1"], select: false },
     playerPhotoId: { type: Schema.Types.ObjectId, required: true },
     paymentProofId: { type: Schema.Types.ObjectId, required: true },
-    transactionReference: { type: String, required: true, unique: true },
+    // Retain the existing unique index without inventing a payment reference.
+    // Missing references receive an internal marker, hidden from API responses.
+    transactionReference: {
+      type: String,
+      required: true,
+      unique: true,
+      select: false,
+      default: () => `NOT-COLLECTED-${randomUUID()}`,
+    },
     paymentAmount: { type: Number, default: 150 },
     status: {
       type: String,

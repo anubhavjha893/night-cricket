@@ -134,10 +134,6 @@ export function PlayerReview({ id, onClose, onDecision }) {
             <h3>
               Payment verification <strong>₹{player.paymentAmount}</strong>
             </h3>
-            <p className="small-note">
-              Transaction reference:{" "}
-              <strong>{player.transactionReference}</strong>
-            </p>
             <PrivateImage
               id={player.paymentProofId}
               alt={`${player.name} payment screenshot`}

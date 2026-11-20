@@ -18,7 +18,8 @@ export const registrationSchema = z.object({
   password: z
     .string()
     .min(8, "Use a password with at least 8 characters.")
-    .max(128),
+    .max(128)
+    .optional(),
   transactionReference: z
     .string()
     .trim()
@@ -28,6 +29,7 @@ export const registrationSchema = z.object({
       /^[a-zA-Z0-9-]+$/,
       "Use only letters, digits or hyphens in the transaction reference.",
     )
-    .transform((v) => v.toUpperCase()),
+    .transform((v) => v.toUpperCase())
+    .optional(),
   declaration: z.literal("true", { error: "Please accept the declaration." }),
 });

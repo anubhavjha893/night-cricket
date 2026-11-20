@@ -1,0 +1,65 @@
+REGISTRATION AND IMAGE UPDATE - 20 NOVEMBER 2026
+
+New registration forms use the entered mobile number as the password. The
+read-only password preview mirrors changes immediately. The server derives the
+password from its normalized phone field when no separate password is supplied.
+Hashes remain bcrypt; organiser authentication and existing player passwords
+are unchanged. Compatibility for already-open older forms is retained.
+
+This phone-as-password behavior was explicitly requested by the owner. It is
+predictable authentication: anyone knowing a player's number can sign in as
+that player and access their private profile and payment screenshot. Rate
+limits cannot resolve that fundamental privacy risk. OTP or a private password
+would be needed to restore proof of ownership. No existing account is reset.
+
+The new form does not collect UTR or transaction reference. A payment screenshot
+and organiser verification remain required. Old references and their unique
+index are retained for compatible rollout. New records receive a hidden unique
+NOT-COLLECTED marker for that old index; it is not a payment reference. Neither
+player nor organiser screens display a reference field. Phone uniqueness and
+authenticated replay keep ordinary retries from duplicating registrations or
+uploaded files. Older clients supplying real references retain duplicate checks.
+
+GET /health and /api/health return HTTP 200, text/plain, exactly:
+health is good
+These are liveness endpoints, even if MongoDB is unavailable. /api/ready remains
+the separate database readiness check used by Render. Vercel forwards /health
+and /api/* to the backend.
+
+Image bytes (same original photos, no changed subjects or composition):
+                              Original       Full WebP       Mobile 640px WebP
+Night stadium                 182,266        128,072         37,250
+Season 1 welcome            2,286,765        110,942         35,624
+Season 1 trophy             2,633,500        189,252         51,278
+Total                      5,102,531        428,266        124,152
+Full WebP total is 91.6% smaller; the two Season 1 images are 93.9% smaller.
+Browsers choose responsive 640/960/full-width variants using srcset and sizes.
+Highlights remain lazy-loaded; the hero has high fetch priority and intrinsic
+dimensions. Original assets are retained for recovery, but the website requests
+the optimized variants. These are measured asset sizes, not a claimed loading
+time, Lighthouse score or cold-start improvement.
+Rebuild assets with npm run optimize:images (sharp development dependency).
+
+Verified locally: npm test 29/29, client timeout test 1/1, production build,
+and isolated desktop/mobile end-to-end browser flow passed. Browser coverage:
+password follows changed phone, read-only preview, no UTR field, successful
+submission with screenshot, pending status, organiser approval, notification,
+logout/relogin with phone password and custom uploaded QR. Regression tests
+also verify normalized +91 phone login, concurrent retries, two distinct players
+without references, prior custom-password clients, health response body, and
+health while readiness rejects a disconnected database.
+
+Rollout: publish the tested commit on a release branch, deploy that exact
+backend commit to Render first, check health/readiness, then update GitHub main
+to publish its matching frontend. The old frontend remains compatible with the
+new API. Existing database indexes do not need dropping or rebuilding.
+Manual live smoke: node tests/security/cloud-smoke.mjs. Keep real registration
+closed until its scheduled opening; do not create real players for this smoke.
+Actual final release identity/results are recorded in ignored
+test-results/cloud/final-release.json and test-results/cloud/smoke.json.
+
+Rollback: use Render deployment dep-dc013r142hec738cnnrg and Vercel deployment
+dpl_Aw96CqWboUKRoxv7roJHGXLhgqS6 as the previous healthy release pair. Restore
+the frontend first if reverting both. Data changes are additive; do not delete
+new registrations or restore the database over player submissions. Existing
+phone-derived hashes remain normal bcrypt hashes usable by the older login.

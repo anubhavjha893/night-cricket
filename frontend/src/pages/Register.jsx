@@ -55,11 +55,9 @@ export function Register() {
     name: "",
     age: "",
     phone: "",
-    password: "",
     address: "",
     roles: [],
     tshirtSize: "",
-    transactionReference: "",
     declaration: false,
   });
   const [playerPhoto, setPlayerPhoto] = useState(null);
@@ -287,7 +285,7 @@ export function Register() {
             </h2>
             <p className="form-description">
               {step === 0
-                ? "Use accurate details. Your mobile number and password will be your sign-in credentials."
+                ? "Use accurate details. Your mobile number will also be your sign-in password."
                 : step === 1
                   ? "Help the organisers get to know your playing profile."
                   : step === 2
@@ -357,17 +355,13 @@ export function Register() {
                   </Field>
                   <Field
                     id="password"
-                    label="Create a password"
-                    type="password"
-                    value={data.password}
-                    onChange={set("password")}
-                    autoComplete="new-password"
-                    minLength={8}
-                    maxLength={128}
-                    placeholder="At least 8 characters"
-                    hint="Keep it safe. You’ll use it to track your application."
-                    required
-                    error={errors.password}
+                    label="Your sign-in password"
+                    type="text"
+                    value={data.phone}
+                    readOnly
+                    autoComplete="off"
+                    placeholder="Your mobile number appears here"
+                    hint="Automatically filled from your mobile number. Use this number as your password to sign in."
                   />
                 </>
               )}
@@ -560,19 +554,6 @@ export function Register() {
                         paymentProof: error,
                       }));
                     }}
-                  />
-                  <Field
-                    id="transactionReference"
-                    label="Transaction reference / UTR"
-                    value={data.transactionReference}
-                    onChange={set("transactionReference")}
-                    minLength={6}
-                    maxLength={64}
-                    pattern="[a-zA-Z0-9-]+"
-                    placeholder="Enter the reference shown on your receipt"
-                    hint="This helps the organisers match and verify your payment."
-                    required
-                    error={errors.transactionReference}
                   />
                   <label className="checkbox-line">
                     <input

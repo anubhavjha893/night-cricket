@@ -40,8 +40,12 @@ export function Home() {
         </div>
         <div className="hero-visual">
           <img
-            src="/assets/night-stadium.jpg"
+            src="/assets/night-stadium.webp"
+            srcSet="/assets/night-stadium-640.webp 640w, /assets/night-stadium-960.webp 960w, /assets/night-stadium.webp 1200w"
+            sizes="(max-width: 760px) 100vw, 55vw"
             alt="A cricket stadium illuminated by floodlights at night"
+            width="1200"
+            height="737"
             fetchPriority="high"
           />
           <div className="season-stamp">
@@ -188,7 +192,8 @@ export function Home() {
             <p>
               Your personal details, Indian mobile number, a player photograph,
               playing role, T-shirt size and a screenshot of your ₹150 payment.
-              Create a password so you can track your registration.
+              Your mobile number is also your password for tracking your
+              registration.
             </p>
           </details>
           <details>

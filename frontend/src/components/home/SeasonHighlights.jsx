@@ -4,13 +4,17 @@ import "../../styles/highlights.css";
 
 const highlights = [
   {
-    image: "/assets/season-1-welcome.png",
+    image: "/assets/season-1-welcome.webp",
+    imageSet:
+      "/assets/season-1-welcome-640.webp 640w, /assets/season-1-welcome-960.webp 960w, /assets/season-1-welcome.webp 1536w",
     alt: "A player and guests sharing a bouquet during the Season 1 gathering",
     title: "A warm welcome.",
     caption: "A moment from our first season’s gathering.",
   },
   {
-    image: "/assets/season-1-trophy.png",
+    image: "/assets/season-1-trophy.webp",
+    imageSet:
+      "/assets/season-1-trophy-640.webp 640w, /assets/season-1-trophy-960.webp 960w, /assets/season-1-trophy.webp 1536w",
     alt: "Two Season 1 cricket players holding a trophy on the ground at night",
     title: "Memories under the lights.",
     caption: "Season 1 players sharing a moment with the trophy.",
@@ -47,6 +51,8 @@ export function SeasonHighlights() {
             >
               <img
                 src={highlight.image}
+                srcSet={highlight.imageSet}
+                sizes="(max-width: 760px) 100vw, 50vw"
                 alt={highlight.alt}
                 width="1536"
                 height="1024"

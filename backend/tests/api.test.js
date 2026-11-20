@@ -102,6 +102,58 @@ test("registration saves a pending player and private GridFS uploads without exp
     .expect(403);
 });
 
+test("new registration needs neither a separate password nor UTR; phone password works and retries are safe", async () => {
+  const data = payload();
+  delete data.password;
+  delete data.transactionReference;
+  data.phone = "+91 98765 43210";
+  const client = request.agent(app).set("Origin", "http://localhost:5173");
+  const submitted = await register(client, data);
+  assert.equal(submitted.status, 201);
+  const profile = await client.get("/api/player/me").expect(200);
+  assert.equal(profile.body.phone, "9876543210");
+  assert.equal(profile.body.transactionReference, undefined);
+  await client.post("/api/auth/logout").expect(200);
+  await client
+    .post("/api/auth/login")
+    .send({ phone: "9876543210", password: "incorrect" })
+    .expect(401);
+  await client
+    .post("/api/auth/login")
+    .send({ phone: "9876543210", password: "9876543210" })
+    .expect(200);
+  const filesBefore = await mongoose.connection.db
+    .collection("uploads.files")
+    .countDocuments();
+  const retries = await Promise.all([
+    register(client, data),
+    register(client, data),
+  ]);
+  assert.deepEqual(
+    retries.map((r) => r.status),
+    [200, 200],
+  );
+  assert.equal(await Player.countDocuments({ phone: "9876543210" }), 1);
+  assert.equal(
+    await mongoose.connection.db.collection("uploads.files").countDocuments(),
+    filesBefore,
+  );
+  const second = payload();
+  delete second.password;
+  delete second.transactionReference;
+  assert.equal((await register(request.agent(app), second)).status, 201);
+});
+
+test("health endpoints return only the requested plain text", async () => {
+  for (const route of ["/health", "/api/health"]) {
+    const response = await request(app)
+      .get(route)
+      .expect(200)
+      .expect("Content-Type", /text\/plain/);
+    assert.equal(response.text, "health is good");
+  }
+});
+
 test("another player cannot view private payment proof or impersonate an administrator", async () => {
   const a = request.agent(app).set("Origin", "http://localhost:5173"),
     b = request.agent(app).set("Origin", "http://localhost:5173");

@@ -117,7 +117,10 @@ test("logout revokes captured cookies across instances, including legacy JWTs; n
       expiresIn: -1,
     });
   await request(app).get("/api/auth/me").set("Cookie", expired).expect(401);
-  await request(app).get('/api/auth/me').set('Cookie','ugm_session=invalid-token').expect(401);
+  await request(app)
+    .get("/api/auth/me")
+    .set("Cookie", "ugm_session=invalid-token")
+    .expect(401);
 });
 
 test("all admin operations and metrics are protected; private files require ownership", async () => {
@@ -597,5 +600,7 @@ test("actual database loss fails readiness/API quickly while liveness stays heal
   await request(app).get("/api/ready").timeout(2000).expect(503);
   await request(app).get("/api/config").timeout(2000).expect(503);
   await request(app).get("/api/live").expect(200);
+  const health = await request(app).get("/api/health").expect(200);
+  assert.equal(health.text, "health is good");
   assert.ok(Date.now() - started < 2000);
 });

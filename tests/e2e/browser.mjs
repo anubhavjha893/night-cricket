@@ -59,9 +59,14 @@ try {
   await page
     .getByLabel("Full address", { exact: false })
     .fill("Tenughat, Bokaro, Jharkhand 829123");
-  await page
-    .getByLabel("Create a password", { exact: false })
-    .fill("Browser-player123!");
+  assert.equal(await page.locator("#password").inputValue(), "9876543210");
+  assert.equal(
+    await page.locator("#password").evaluate((el) => el.readOnly),
+    true,
+  );
+  await page.getByLabel("Mobile number", { exact: false }).fill("9876543211");
+  assert.equal(await page.locator("#password").inputValue(), "9876543211");
+  await page.getByLabel("Mobile number", { exact: false }).fill("9876543210");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Batter", { exact: true }).check();
   await page.getByRole("radio", { name: "L", exact: true }).check();
@@ -123,9 +128,7 @@ try {
     mimeType: "image/png",
     buffer: Buffer.from(testReceipt, "base64"),
   });
-  await page
-    .getByLabel("Transaction reference / UTR", { exact: false })
-    .fill("BROWSERTEST123456");
+  assert.equal(await page.locator("#transactionReference").count(), 0);
   await page.getByRole("checkbox", { name: /I confirm/ }).check();
   await page
     .getByRole("button", { name: "Submit registration", exact: true })
@@ -221,7 +224,7 @@ try {
     `Logout failed: ${await logoutResponse.text()}`,
   );
   await page.getByLabel(/^Mobile number/).fill("9876543210");
-  await page.getByLabel(/^Password/).fill("Browser-player123!");
+  await page.getByLabel(/^Password/).fill("9876543210");
   await page
     .getByRole("button", { name: "View my registration", exact: true })
     .click();
@@ -254,9 +257,10 @@ try {
   await registration
     .getByLabel(/^Full address/)
     .fill("Synthetic test address only");
-  await registration
-    .getByLabel(/^Create a password/)
-    .fill("Synthetic-QR-password123!");
+  assert.equal(
+    await registration.locator("#password").inputValue(),
+    "9765432109",
+  );
   await registration
     .getByRole("button", { name: "Continue", exact: true })
     .click();

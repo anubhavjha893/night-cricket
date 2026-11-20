@@ -39,7 +39,7 @@ try {
         await page.locator("body").innerText(),
         /URMILA GUPTA MEMORIAL/i,
       );
-      for (const name of ["season-1-welcome.png", "season-1-trophy.png"])
+      for (const name of ["season-1-welcome.webp", "season-1-trophy.webp"])
         assert.equal(
           await page
             .locator(`img[src*="${name}"]`)
@@ -80,6 +80,14 @@ try {
   await check("Anonymous admin access is rejected", async () =>
     assert.equal((await anon.get("/api/admin/players")).status(), 401),
   );
+  await check("Health endpoints return only health is good", async () => {
+    for (const path of ["/health", "/api/health"]) {
+      const response = await anon.get(path);
+      assert.equal(response.status(), 200);
+      assert.equal(await response.text(), "health is good");
+      assert.match(response.headers()["content-type"], /text\/plain/);
+    }
+  });
   await check(
     "Admin uses email; login cookie survives Vercel-to-Render proxy",
     async () => {
@@ -165,6 +173,15 @@ try {
         await page.locator("body").innerText(),
         /24 November|24 Nov|not yet|opens/i,
       );
+      await page
+        .getByLabel("Mobile number", { exact: false })
+        .fill("9876543210");
+      assert.equal(await page.locator("#password").inputValue(), "9876543210");
+      assert.equal(
+        await page.locator("#password").evaluate((el) => el.readOnly),
+        true,
+      );
+      assert.equal(await page.locator("#transactionReference").count(), 0);
       assert.deepEqual(errors, []);
     },
   );

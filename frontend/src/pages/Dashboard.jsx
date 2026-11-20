@@ -158,10 +158,6 @@ export function Dashboard() {
                       <dt>Address</dt>
                       <dd>{player.address}</dd>
                     </div>
-                    <div className="span-2">
-                      <dt>Payment transaction reference</dt>
-                      <dd>{player.transactionReference}</dd>
-                    </div>
                   </dl>
                 </div>
               </div>

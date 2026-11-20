@@ -20,7 +20,9 @@ export function createRegistrationController({ session, now, env }) {
   async function replayRegistration(data, password, res) {
     const existing = await Player.findOne({
       phone: data.phone,
-      transactionReference: data.transactionReference,
+      ...(data.transactionReference
+        ? { transactionReference: data.transactionReference }
+        : {}),
     }).select("+passwordHash +passwordScheme");
     if (!existing || !(await verifyPassword(password, existing, env)))
       return false;
@@ -54,7 +56,9 @@ export function createRegistrationController({ session, now, env }) {
         message: "Please check your registration details.",
         errors: result.error.flatten().fieldErrors,
       });
-    const { password, declaration, ...data } = result.data;
+    const { password: legacyPassword, declaration, ...data } = result.data;
+    // New forms omit the password. Keep older, already-open clients compatible.
+    const password = legacyPassword ?? data.phone;
     if (await replayRegistration(data, password, res)) return;
     if (!writePasswordScheme(env) && Buffer.byteLength(password, "utf8") > 72)
       return res.status(400).json({
@@ -67,7 +71,8 @@ export function createRegistrationController({ session, now, env }) {
         "This mobile number is already registered. Sign in to track your application.",
       );
     if (
-      await Player.exists({ transactionReference: data.transactionReference })
+      data.transactionReference &&
+      (await Player.exists({ transactionReference: data.transactionReference }))
     )
       throw fail(
         409,
