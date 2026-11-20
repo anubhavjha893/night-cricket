@@ -79,11 +79,13 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(origin + "/#/login");
+  await page.goto(origin + "/#/register");
   await page.getByLabel("Mobile number", { exact: false }).fill("9876543210");
-  await page.getByLabel("Password", { exact: false }).fill("9876543210");
   await page
-    .getByRole("button", { name: "View my registration", exact: true })
+    .getByRole("button", {
+      name: "Already registered? Sign in with this number",
+      exact: true,
+    })
     .click();
   await page
     .getByRole("link", { name: "Correct & resubmit", exact: true })
@@ -192,6 +194,7 @@ try {
   await admin
     .getByRole("button", { name: "Open admin panel", exact: true })
     .click();
+  await admin.getByRole("button", { name: /Player registrations/ }).click();
   await admin
     .getByRole("button", { name: "Corrected Test Player", exact: true })
     .click();
@@ -205,6 +208,12 @@ try {
     .getByRole("button", { name: "No, not right now", exact: true })
     .click();
   assert.equal((await Player.findById(before._id)).status, "approved");
+  await admin.getByRole("button", { name: "Overview", exact: true }).click();
+  await admin.getByText("₹150", { exact: true }).waitFor();
+  await admin
+    .getByRole("heading", { name: "Recent approvals after rejection" })
+    .waitFor();
+  await admin.getByText("Corrected Test Player", { exact: true }).waitFor();
   assert.deepEqual(errors, []);
   await writeFile(
     "test-results/corrections/result.json",
@@ -218,6 +227,7 @@ try {
           "Resubmission after new registration closes",
           "Same registration ID, pending status and one player record",
           "Admin reviews and approves corrected revision",
+          "Overview counts approved collection and post-rejection approval",
         ],
         data: "isolated synthetic only",
       },

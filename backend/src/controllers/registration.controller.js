@@ -18,12 +18,9 @@ import {
 
 export function createRegistrationController({ session, now, env }) {
   async function replayRegistration(data, password, res) {
-    const existing = await Player.findOne({
-      phone: data.phone,
-      ...(data.transactionReference
-        ? { transactionReference: data.transactionReference }
-        : {}),
-    }).select("+passwordHash +passwordScheme");
+    const existing = await Player.findOne({ phone: data.phone }).select(
+      "+passwordHash +passwordScheme",
+    );
     if (!existing || !(await verifyPassword(password, existing, env)))
       return false;
     session.setSession(res, existing, "player");

@@ -170,6 +170,10 @@ button:disabled {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.phone-sign-in {
+  margin: -4px 0 16px;
+  min-height: 24px;
+}
 .alert .inline-button {
   color: inherit;
   margin-left: 7px;
@@ -1193,7 +1197,8 @@ button:disabled {
 }
 .admin-tabs {
   display: flex;
-  gap: 28px;
+  flex-wrap: wrap;
+  gap: 12px 28px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 28px;
 }
@@ -1217,6 +1222,69 @@ button:disabled {
   grid-template-columns: repeat(4, 1fr);
   gap: 17px;
   margin-bottom: 28px;
+}
+.overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.overview-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 7px;
+}
+.overview-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+}
+.overview-stats .stat-card {
+  min-width: 0;
+}
+.stat-card.collection svg {
+  color: #b7a2db;
+}
+.stat-card.reapproved svg {
+  color: #83b9cb;
+}
+.collection-note {
+  margin: 14px 0 28px;
+}
+.reapproval-panel > .overview-heading {
+  margin-bottom: 10px;
+}
+.reapproval-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.reapproval-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-top: 1px solid var(--border);
+}
+.reapproval-list li > div {
+  display: grid;
+  gap: 5px;
+}
+.reapproval-list li > div:last-child {
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+}
+.reapproval-list small {
+  color: var(--muted);
+  font-size: 12px;
 }
 .stat-card {
   display: grid;
@@ -2142,7 +2210,16 @@ textarea:focus-visible {
     max-width: none;
   }
   .admin-tabs {
-    gap: 22px;
+    gap: 12px 22px;
+  }
+  .overview-heading {
+    align-items: flex-start;
+  }
+  .overview-heading .button {
+    flex-shrink: 0;
+  }
+  .reapproval-list li {
+    gap: 12px;
   }
   .admin-tabs button {
     font-size: 12px;
@@ -2153,6 +2230,10 @@ textarea:focus-visible {
   }
   .admin-stats {
     grid-template-columns: 1fr 1fr;
+    gap: 11px;
+  }
+  .overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 11px;
   }
   .stat-card {

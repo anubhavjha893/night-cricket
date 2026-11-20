@@ -5,7 +5,7 @@ const routeLabel = (path) => {
   const normalized = path
     .split("?")[0]
     .replace(/\/[a-f0-9]{24}(?=\/|$)/gi, "/:id");
-  return /^\/api\/(auth\/(login|logout|me)|admin\/(login|players|players\/:id|players\/:id\/decision|settings|metrics)|player\/(me|notifications\/read|resubmit)|files\/:id|registrations|payment\/qr|config|health|ready|live)$/.test(
+  return /^\/api\/(auth\/(login|logout|me)|admin\/(login|summary|players|players\/:id|players\/:id\/decision|settings|metrics)|player\/(me|notifications\/read|resubmit)|files\/:id|registrations|payment\/qr|config|health|ready|live)$/.test(
     normalized,
   )
     ? normalized

@@ -2,6 +2,107 @@ import { Player } from "../models/index.js";
 import { fail } from "../utils/http-error.js";
 import { idIsValid } from "../utils/object-id.js";
 import { decisionSchema } from "../validators/admin.schema.js";
+import { tournament } from "../config/tournament.js";
+
+export async function getAdminSummary(req, res) {
+  const [result] = await Player.aggregate([
+    {
+      $set: {
+        decisionHistory: {
+          $reduce: {
+            input: { $ifNull: ["$notifications", []] },
+            initialValue: { seenRejection: false, reapproved: false },
+            in: {
+              seenRejection: {
+                $or: [
+                  "$$value.seenRejection",
+                  { $eq: ["$$this.kind", "rejected"] },
+                ],
+              },
+              reapproved: {
+                $or: [
+                  "$$value.reapproved",
+                  {
+                    $and: [
+                      "$$value.seenRejection",
+                      { $eq: ["$$this.kind", "approved"] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $facet: {
+        totals: [
+          {
+            $group: {
+              _id: null,
+              total: { $sum: 1 },
+              pending: {
+                $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+              },
+              approved: {
+                $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] },
+              },
+              rejected: {
+                $sum: { $cond: [{ $eq: ["$status", "rejected"] }, 1, 0] },
+              },
+              reapprovedAfterRejection: {
+                $sum: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $eq: ["$status", "approved"] },
+                        "$decisionHistory.reapproved",
+                      ],
+                    },
+                    1,
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ],
+        reapprovedPlayers: [
+          {
+            $match: {
+              status: "approved",
+              "decisionHistory.reapproved": true,
+            },
+          },
+          { $sort: { reviewedAt: -1, _id: 1 } },
+          { $limit: 10 },
+          {
+            $project: {
+              _id: 0,
+              name: 1,
+              registrationId: 1,
+              reviewedAt: 1,
+              submissionRevision: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]).option({ maxTimeMS: 2000 });
+  const totals = result?.totals[0] || {
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    reapprovedAfterRejection: 0,
+  };
+  res.json({
+    ...totals,
+    approvedCollection: totals.approved * tournament.fee,
+    reapprovedPlayers: result?.reapprovedPlayers || [],
+  });
+}
 
 export async function listPlayers(req, res) {
   const status = ["pending", "approved", "rejected"].includes(req.query.status)

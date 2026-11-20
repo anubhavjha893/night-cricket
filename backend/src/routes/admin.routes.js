@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createAuthController } from "../controllers/auth.controller.js";
 import { runWork } from "../middleware/work-limit.middleware.js";
 import {
+  getAdminSummary,
   listPlayers,
   getPlayerDetails,
   reviewPlayer,
@@ -33,6 +34,7 @@ export function createAdminRouter({
     runWork(createAuthController(session, env).loginAdmin),
   );
   router.use(requireUser, requireAdmin);
+  router.get("/summary", getAdminSummary);
   router.get("/metrics", (req, res) =>
     res.json(req.app.locals.observation.snapshot()),
   );

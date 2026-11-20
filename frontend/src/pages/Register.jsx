@@ -77,6 +77,7 @@ export function Register() {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState("submit");
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
@@ -187,6 +188,7 @@ export function Register() {
       setError("Please accept the declaration before submitting.");
       return;
     }
+    setBusyAction("submit");
     setBusy(true);
     try {
       const body = new FormData();
@@ -228,6 +230,28 @@ export function Register() {
       }
     } finally {
       setBusy(false);
+    }
+  }
+  async function signInWithPhone() {
+    setError("");
+    setBusyAction("sign-in");
+    setBusy(true);
+    try {
+      await api("/auth/login", {
+        method: "POST",
+        body: { phone: data.phone, password: data.phone },
+      });
+      await refreshUser();
+      navigate("/dashboard", { replace: true });
+    } catch (problem) {
+      setError(
+        problem.status === 401
+          ? "Could not sign in with this number. Use the regular sign-in page if your account has a different password."
+          : problem.message,
+      );
+    } finally {
+      setBusy(false);
+      setBusyAction("submit");
     }
   }
   async function copyUpi() {
@@ -455,6 +479,16 @@ export function Register() {
                       error={errors.phone}
                     />
                   </div>
+                  {!correcting && (
+                    <button
+                      className="inline-button phone-sign-in"
+                      type="button"
+                      disabled={busy || !/^[6-9]\d{9}$/.test(data.phone)}
+                      onClick={signInWithPhone}
+                    >
+                      Already registered? Sign in with this number
+                    </button>
+                  )}
                   <Field
                     id="address"
                     label="Full address"
@@ -798,11 +832,17 @@ export function Register() {
           <div className="submission-message">
             <span className="spinner" aria-hidden="true" />
             <strong>
-              {correcting
-                ? "Submitting your correction…"
-                : "Submitting your registration…"}
+              {busyAction === "sign-in"
+                ? "Signing you in…"
+                : correcting
+                  ? "Submitting your correction…"
+                  : "Submitting your registration…"}
             </strong>
-            <span>Please wait a moment.</span>
+            <span>
+              {busyAction === "sign-in"
+                ? "Checking your registration."
+                : "Please wait a moment."}
+            </span>
           </div>
         </div>
       )}

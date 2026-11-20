@@ -240,23 +240,49 @@ test("rejection requires a reason and the reason survives player sign out and si
   assert.match(reviewed.notifications.at(-1).message, /does not match/);
 });
 
-test("duplicate phone and transaction reference are rejected without extra uploaded files", async () => {
+test("rejected phone recovery signs in once and duplicate references stay blocked", async () => {
   const data = payload();
-  await register(
-    request.agent(app).set("Origin", "http://localhost:5173"),
-    data,
-  );
+  delete data.password;
+  const client = request.agent(app).set("Origin", "http://localhost:5173");
+  await register(client, data);
+  const profile = (await client.get("/api/player/me")).body;
+  await admin
+    .patch(`/api/admin/players/${profile._id}/decision`)
+    .send({
+      status: "rejected",
+      reason: "Please correct the payment screenshot.",
+    })
+    .expect(200);
   const count = await mongoose.connection.db
     .collection("uploads.files")
     .countDocuments();
-  const phoneDuplicate = await register(
+  const recoveredClient = request
+    .agent(app)
+    .set("Origin", "http://localhost:5173");
+  const phoneDuplicate = await register(recoveredClient, {
+    ...data,
+    phone: `+91 ${data.phone}`,
+    transactionReference: "DIFFERENTUTR123",
+  });
+  assert.equal(phoneDuplicate.status, 200);
+  assert.match(phoneDuplicate.body.message, /No duplicate was created/);
+  const recoveredProfile = await recoveredClient
+    .get("/api/player/me")
+    .expect(200);
+  assert.equal(recoveredProfile.body._id, profile._id);
+  assert.equal(recoveredProfile.body.status, "rejected");
+  assert.equal(await Player.countDocuments({ phone: data.phone }), 1);
+  assert.equal((await Player.findById(profile._id)).status, "rejected");
+  const invalidPassword = await register(
     request.agent(app).set("Origin", "http://localhost:5173"),
     {
       ...data,
-      transactionReference: "DIFFERENTUTR123",
+      phone: `+91 ${data.phone}`,
+      password: "Not-the-phone-password",
+      transactionReference: "ANOTHERUTR123",
     },
   );
-  assert.equal(phoneDuplicate.status, 409);
+  assert.equal(invalidPassword.status, 409);
   const referenceDuplicate = await register(
     request.agent(app).set("Origin", "http://localhost:5173"),
     {
@@ -333,6 +359,35 @@ test("admin list is alphabetic, filterable and paginated; search treats regex ch
   assert.ok(body.counts.rejected >= 1);
   const empty = await admin.get("/api/admin/players?search=%5B").expect(200);
   assert.equal(empty.body.total, 0);
+});
+
+test("admin overview totals approved collection and detects approval after rejection", async () => {
+  const before = (await admin.get("/api/admin/summary").expect(200)).body;
+  const { client, data, player } = await rejectedPlayer();
+  const rejected = (await admin.get("/api/admin/summary").expect(200)).body;
+  assert.equal(rejected.rejected, before.rejected + 1);
+  assert.equal(rejected.approvedCollection, before.approved * 150);
+
+  await resubmit(client, data).expect(200);
+  await admin
+    .patch(`/api/admin/players/${player._id}/decision`)
+    .send({ status: "approved", submissionRevision: 1 })
+    .expect(200);
+
+  const summary = (await admin.get("/api/admin/summary").expect(200)).body;
+  assert.equal(summary.total, before.total + 1);
+  assert.equal(summary.approved, before.approved + 1);
+  assert.equal(summary.rejected, before.rejected);
+  assert.equal(summary.approvedCollection, (before.approved + 1) * 150);
+  assert.equal(
+    summary.reapprovedAfterRejection,
+    before.reapprovedAfterRejection + 1,
+  );
+  assert.ok(
+    summary.reapprovedPlayers.some(
+      (entry) => entry.registrationId === player.registrationId,
+    ),
+  );
 });
 
 test("rejected player can correct the same registration, replace proof and retry without duplicates", async () => {

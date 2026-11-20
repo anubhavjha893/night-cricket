@@ -131,6 +131,7 @@ test("all admin operations and metrics are protected; private files require owne
     ["get", "/api/admin/players"],
     ["get", `/api/admin/players/${profile._id}`],
     ["patch", `/api/admin/players/${profile._id}/decision`],
+    ["get", "/api/admin/summary"],
     ["get", "/api/admin/settings"],
     ["put", "/api/admin/settings"],
     ["get", "/api/admin/metrics"],
