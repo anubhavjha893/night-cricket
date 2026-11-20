@@ -69,14 +69,22 @@ export function Login({ admin = false }) {
         </div>
       </div>
       <div className="login-card">
+        <nav className="login-mode-switch" aria-label="Sign-in type">
+          <Link to="/login" aria-current={!admin ? "page" : undefined}>
+            <UserRound size={17} aria-hidden="true" /> Player
+          </Link>
+          <Link to="/admin" aria-current={admin ? "page" : undefined}>
+            <ShieldCheck size={17} aria-hidden="true" /> Admin
+          </Link>
+        </nav>
         <span className="login-icon">
           {admin ? <ShieldCheck /> : <UserRound />}
         </span>
         <h2>{admin ? "Admin sign in" : "Player sign in"}</h2>
         <p>
           {admin
-            ? "Welcome back to the organising desk."
-            : "Let’s check on your application."}
+            ? "Sign in with your organiser email address and password."
+            : "Sign in with the mobile number and password used during registration."}
         </p>
         {error && <Alert>{error}</Alert>}
         <form onSubmit={submit}>

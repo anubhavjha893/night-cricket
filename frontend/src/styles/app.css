@@ -794,6 +794,32 @@ button:disabled {
   border-radius: 8px;
   margin-bottom: 20px;
 }
+.login-card .login-mode-switch {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 26px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.login-mode-switch a {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+.login-mode-switch a[aria-current="page"] {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
 .login-card h2 {
   font: 700 38px var(--heading);
   margin-bottom: 8px;
