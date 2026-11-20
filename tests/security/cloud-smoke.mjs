@@ -2,6 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import dotenv from "dotenv";
 import { chromium, request } from "playwright";
+import { fileTypeFromBuffer } from "file-type";
 const env = dotenv.parse(fs.readFileSync(".env.deploy"));
 const base = "https://ugm-cricket-season-2.vercel.app";
 const result = {
@@ -52,7 +53,7 @@ try {
       });
     },
   );
-  await check("Live readiness, payment configuration and PNG QR", async () => {
+  await check("Live readiness, configured payment and QR image", async () => {
     for (const path of ["/api/ready", "/api/config", "/api/payment/qr"]) {
       const start = performance.now();
       const r = await anon.get(path);
@@ -65,15 +66,20 @@ try {
       assert.match(r.headers()["cache-control"], /no-store/);
       if (path.endsWith("/config")) {
         const c = await r.json();
-        assert.equal(c.payment.payeeName, "Anubhav Jha");
-        assert.equal(c.payment.upiId, "8210708838sbi@axl");
+        // Payment details are mutable organiser settings, not deployment constants.
+        assert.equal(c.payment.configured, true);
+        assert.equal(typeof c.payment.payeeName, "string");
+        assert(c.payment.uploadedQr || c.payment.upiId?.includes("@"));
         assert.equal(c.fee, 150);
         assert.equal(typeof c.registration.isOpen, "boolean");
         result.registration = c.registration;
       }
       if (path.endsWith("/qr")) {
-        assert.match(r.headers()["content-type"], /image\/png/);
-        assert.equal((await r.body()).subarray(1, 4).toString(), "PNG");
+        const format = await fileTypeFromBuffer(await r.body());
+        assert(
+          ["image/png", "image/jpeg", "image/webp"].includes(format?.mime),
+        );
+        assert(r.headers()["content-type"].startsWith(format.mime));
       }
     }
   });
