@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import {
   Bell,
   CheckCircle2,
@@ -112,6 +112,19 @@ export function Dashboard() {
             </div>
             <span className="registration-id">{player.registrationId}</span>
           </div>
+          {rejected && (
+            <div className="panel correction-callout">
+              <h2>Correct your application</h2>
+              <p>
+                Review the rejection reason above, correct your details or
+                replace the payment screenshot, then resubmit for verification.
+                Your registration ID stays the same.
+              </p>
+              <Link className="button" to="/register?correct=1">
+                Correct & resubmit
+              </Link>
+            </div>
+          )}
           <div className="player-dashboard-grid">
             <div>
               <div className="panel">

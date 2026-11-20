@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import QRCode from "qrcode";
 import {
   Check,
@@ -19,6 +19,7 @@ import { Loading } from "../components/common/Loading";
 import { useApp } from "../hooks/useApp";
 import { Field } from "../components/forms/Field";
 import { FileUpload } from "../components/forms/FileUpload";
+import { PrivateImage } from "../components/common/PrivateImage";
 
 const steps = [
   {
@@ -48,8 +49,19 @@ export function Register() {
     refreshConfig,
     refreshUser,
     user,
+    authLoading,
   } = useApp();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const wantsCorrection = searchParams.get("correct") === "1";
+  const [existing, setExisting] = useState(null);
+  const [existingLoading, setExistingLoading] = useState(
+    user?.role === "player",
+  );
+  const [existingError, setExistingError] = useState("");
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [resubmissionKey] = useState(() => crypto.randomUUID());
+  const correcting = wantsCorrection && existing?.status === "rejected";
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     name: "",
@@ -68,7 +80,41 @@ export function Register() {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
+  const [conflict, setConflict] = useState(false);
   const info = steps[step];
+  useEffect(() => {
+    if (user?.role !== "player") return;
+    const controller = new AbortController();
+    setExistingLoading(true);
+    setExistingError("");
+    api("/player/me", { signal: controller.signal })
+      .then((profile) => {
+        setExisting(profile);
+        if (wantsCorrection && profile.status === "rejected") {
+          setData({
+            name: profile.name,
+            age: String(profile.age),
+            phone: profile.phone,
+            address: profile.address,
+            roles: profile.roles,
+            tshirtSize: profile.tshirtSize,
+            declaration: false,
+          });
+          setPlayerPhoto(null);
+          setPaymentProof(null);
+          setStep(0);
+          setError("");
+          setConflict(false);
+        }
+      })
+      .catch((problem) => {
+        if (!controller.signal.aborted) setExistingError(problem.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setExistingLoading(false);
+      });
+    return () => controller.abort();
+  }, [user?.role, wantsCorrection, profileAttempt]);
   useEffect(() => {
     let live = true;
     setQrError(false);
@@ -116,7 +162,7 @@ export function Register() {
       if (!data.roles.length)
         nextErrors.roles = "Choose at least one playing role.";
       if (!data.tshirtSize) nextErrors.tshirtSize = "Choose your T-shirt size.";
-      if (!playerPhoto)
+      if (!playerPhoto && !(correcting && existing.playerPhotoId))
         nextErrors.playerPhoto = "Please upload your player photograph.";
       setErrors(nextErrors);
       if (Object.keys(nextErrors).length) return;
@@ -127,7 +173,7 @@ export function Register() {
   async function submit(event) {
     event.preventDefault();
     setError("");
-    if (!paymentProof) {
+    if (!paymentProof && !(correcting && existing.paymentProofId)) {
       setErrors((previous) => ({
         ...previous,
         paymentProof: "Please upload your payment screenshot.",
@@ -147,13 +193,25 @@ export function Register() {
           key === "roles" ? JSON.stringify(value) : String(value),
         ),
       );
-      body.append("playerPhoto", playerPhoto);
-      body.append("paymentProof", paymentProof);
-      await api("/registrations", { method: "POST", body });
+      if (playerPhoto) body.append("playerPhoto", playerPhoto);
+      if (paymentProof) body.append("paymentProof", paymentProof);
+      if (correcting)
+        body.append(
+          "submissionRevision",
+          String(existing.submissionRevision || 0),
+        );
+      await api(correcting ? "/player/resubmit" : "/registrations", {
+        method: "POST",
+        body,
+        ...(correcting
+          ? { headers: { "Idempotency-Key": resubmissionKey } }
+          : {}),
+      });
       await refreshUser();
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(error.message);
+      if (correcting && error.status === 409) setConflict(true);
       if (error.errors) {
         setErrors(error.errors);
         if (
@@ -183,7 +241,25 @@ export function Register() {
   const paymentLink = config.payment.upiId
     ? `upi://pay?${new URLSearchParams({ pa: config.payment.upiId, pn: config.payment.payeeName, am: String(config.fee), cu: "INR", tn: "UGM Season 2 registration" })}`
     : "";
-  if (user?.role === "player")
+  if (authLoading || (user?.role === "player" && existingLoading))
+    return <Loading>Loading your registration…</Loading>;
+  if (wantsCorrection && user?.role !== "player")
+    return (
+      <Navigate to={user?.role === "admin" ? "/admin" : "/login"} replace />
+    );
+  if (user?.role === "player" && existingError)
+    return (
+      <section className="wrap narrow page-space">
+        <Alert>{existingError}</Alert>
+        <button
+          className="button"
+          onClick={() => setProfileAttempt((value) => value + 1)}
+        >
+          Try again
+        </button>
+      </section>
+    );
+  if (user?.role === "player" && !correcting)
     return (
       <section className="wrap narrow page-space">
         <Alert tone="info">
@@ -192,6 +268,11 @@ export function Register() {
         <Link className="button" to="/dashboard">
           View my registration
         </Link>
+        {existing?.status === "rejected" && (
+          <Link className="button button-secondary" to="/register?correct=1">
+            Correct & resubmit
+          </Link>
+        )}
       </section>
     );
   return (
@@ -207,8 +288,9 @@ export function Register() {
           <em>Your moment.</em>
         </h1>
         <p>
-          Four simple steps to put your name in the next chapter of Tenughat
-          cricket.
+          {correcting
+            ? "Correct the issues below and resubmit the same registration for review."
+            : "Four simple steps to put your name in the next chapter of Tenughat cricket."}
         </p>
         <div className="sidebar-steps">
           {steps.map((item, index) => (
@@ -250,13 +332,37 @@ export function Register() {
       </aside>
       <div className="registration-card">
         <div className="form-topline">
-          <span>PLAYER APPLICATION</span>
+          <span>
+            {correcting
+              ? `CORRECTION · ${existing.registrationId}`
+              : "PLAYER APPLICATION"}
+          </span>
           <span>Step {step + 1} of 4</span>
         </div>
         <div className="progress-bar">
           <span style={{ width: `${((step + 1) / 4) * 100}%` }} />
         </div>
         <div className="form-content">
+          {correcting && (
+            <Alert tone="info">
+              <strong>Reason for rejection: </strong>
+              {existing.rejectionReason}
+              <p>
+                Correct the issue and resubmit. Your registration ID and sign-in
+                details stay the same. If you have already paid, do not pay
+                again—upload the correct screenshot.
+              </p>
+            </Alert>
+          )}
+          {conflict && (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setProfileAttempt((value) => value + 1)}
+            >
+              Reload latest correction form
+            </button>
+          )}
           {configError && (
             <Alert>
               {configError}{" "}
@@ -269,12 +375,15 @@ export function Register() {
               </button>
             </Alert>
           )}
-          {!configError && !configLoading && !config.registration.isOpen && (
-            <Alert tone="info">
-              {config.registration.message} You can explore the form; submission
-              is available during the registration window.
-            </Alert>
-          )}
+          {!correcting &&
+            !configError &&
+            !configLoading &&
+            !config.registration.isOpen && (
+              <Alert tone="info">
+                {config.registration.message} You can explore the form;
+                submission is available during the registration window.
+              </Alert>
+            )}
           {configLoading && (
             <Loading>Checking registration availability…</Loading>
           )}
@@ -285,7 +394,9 @@ export function Register() {
             </h2>
             <p className="form-description">
               {step === 0
-                ? "Use accurate details. Your mobile number will also be your sign-in password."
+                ? correcting
+                  ? "Correct your details below. Your sign-in number and password stay unchanged."
+                  : "Use accurate details. Your mobile number will also be your sign-in password."
                 : step === 1
                   ? "Help the organisers get to know your playing profile."
                   : step === 2
@@ -327,6 +438,12 @@ export function Register() {
                       type="tel"
                       value={data.phone}
                       onChange={set("phone")}
+                      readOnly={correcting}
+                      hint={
+                        correcting
+                          ? "This is your sign-in number. Contact the organiser if it needs changing."
+                          : undefined
+                      }
                       autoComplete="tel-national"
                       pattern="[6-9][0-9]{9}"
                       maxLength={10}
@@ -353,16 +470,18 @@ export function Register() {
                       rows={3}
                     />
                   </Field>
-                  <Field
-                    id="password"
-                    label="Your sign-in password"
-                    type="text"
-                    value={data.phone}
-                    readOnly
-                    autoComplete="off"
-                    placeholder="Your mobile number appears here"
-                    hint="Automatically filled from your mobile number. Use this number as your password to sign in."
-                  />
+                  {!correcting && (
+                    <Field
+                      id="password"
+                      label="Your sign-in password"
+                      type="text"
+                      value={data.phone}
+                      readOnly
+                      autoComplete="off"
+                      placeholder="Your mobile number appears here"
+                      hint="Automatically filled from your mobile number. Use this number as your password to sign in."
+                    />
+                  )}
                 </>
               )}
               {step === 1 && (
@@ -432,7 +551,12 @@ export function Register() {
                   </fieldset>
                   <FileUpload
                     id="playerPhoto"
-                    label="Player photograph"
+                    label={
+                      correcting
+                        ? "Replace player photograph (optional)"
+                        : "Player photograph"
+                    }
+                    optional={correcting}
                     portrait
                     file={playerPhoto}
                     error={errors.playerPhoto}
@@ -444,10 +568,29 @@ export function Register() {
                       }));
                     }}
                   />
+                  {correcting && !playerPhoto && (
+                    <div className="correction-current-image">
+                      <p className="small-note">
+                        Current photograph will be kept unless you replace it.
+                      </p>
+                      <PrivateImage
+                        id={existing.playerPhotoId}
+                        alt="Current player photograph"
+                      />
+                    </div>
+                  )}
                 </>
               )}
               {step === 2 && (
                 <div className="payment-stage">
+                  {correcting && (
+                    <Alert tone="info">
+                      No additional registration fee is charged for corrections.
+                      If your original payment was successful, continue and keep
+                      or replace its screenshot. Pay only if payment was not
+                      received.
+                    </Alert>
+                  )}
                   {config.payment.configured ? (
                     <>
                       <div className="payment-card">
@@ -508,8 +651,8 @@ export function Register() {
                         <ShieldCheck size={22} />
                         <p>
                           Check the recipient details in your UPI app. After
-                          paying, keep your payment screenshot ready. Payment
-                          is verified manually by the organisers.
+                          paying, keep your payment screenshot ready. Payment is
+                          verified manually by the organisers.
                         </p>
                       </div>
                     </>
@@ -544,7 +687,12 @@ export function Register() {
                   </div>
                   <FileUpload
                     id="paymentProof"
-                    label="Payment screenshot"
+                    label={
+                      correcting
+                        ? "Replace payment screenshot (optional)"
+                        : "Payment screenshot"
+                    }
+                    optional={correcting}
                     file={paymentProof}
                     error={errors.paymentProof}
                     onChange={(file, error) => {
@@ -555,6 +703,18 @@ export function Register() {
                       }));
                     }}
                   />
+                  {correcting && !paymentProof && (
+                    <div className="correction-current-image">
+                      <p className="small-note">
+                        Current payment screenshot. Replace it above if the
+                        rejection was about this screenshot.
+                      </p>
+                      <PrivateImage
+                        id={existing.paymentProofId}
+                        alt="Current payment screenshot"
+                      />
+                    </div>
+                  )}
                   <label className="checkbox-line">
                     <input
                       type="checkbox"
@@ -599,9 +759,11 @@ export function Register() {
                   type="submit"
                   disabled={
                     busy ||
-                    (step === 2 &&
+                    (!correcting &&
+                      step === 2 &&
                       (!config.payment.configured || Boolean(configError))) ||
-                    (step === 3 &&
+                    (!correcting &&
+                      step === 3 &&
                       (Boolean(configError) ||
                         !config.registration.isOpen ||
                         configLoading))
@@ -610,9 +772,13 @@ export function Register() {
                   {busy
                     ? "Submitting…"
                     : step === 3
-                      ? "Submit registration"
+                      ? correcting
+                        ? "Resubmit for verification"
+                        : "Submit registration"
                       : step === 2
-                        ? "I’ve paid · Upload proof"
+                        ? correcting
+                          ? "Continue to payment proof"
+                          : "I’ve paid · Upload proof"
                         : "Continue"}
                 </button>
               </div>

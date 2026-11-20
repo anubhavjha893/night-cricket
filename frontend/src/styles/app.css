@@ -1224,6 +1224,22 @@ button:disabled {
   font: 600 39px/1.2 var(--heading);
   margin-top: 8px;
 }
+.correction-callout {
+  margin: 20px 0;
+}
+.correction-callout p {
+  margin: 10px 0 18px;
+}
+.correction-current-image {
+  margin: 12px 0 20px;
+}
+.correction-current-image img {
+  max-height: 240px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
 .admin-workspace {
   display: grid;
   grid-template-columns: 1.05fr 1fr;

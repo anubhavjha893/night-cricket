@@ -8,7 +8,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function api(endpoint, { method = "GET", body, signal } = {}) {
+export async function api(
+  endpoint,
+  { method = "GET", body, signal, headers = {} } = {},
+) {
   const deadline = AbortSignal.timeout(
     body instanceof FormData ? 35000 : 15000,
   );
@@ -19,8 +22,12 @@ export async function api(endpoint, { method = "GET", body, signal } = {}) {
       method,
       credentials: "include",
       signal: requestSignal,
-      headers:
-        body instanceof FormData ? {} : { "Content-Type": "application/json" },
+      headers: {
+        ...(body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
+        ...headers,
+      },
       body:
         body === undefined
           ? undefined

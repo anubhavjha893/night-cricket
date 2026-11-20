@@ -51,7 +51,7 @@ export function buildWhatsAppMessage({
     return `Namaste ${name}, congratulations! ${tournamentName} mein aapka registration successfully verify aur approve ho gaya hai.\n\nAuction date: ${date}.\n\nAuction ke baad aapko aapki team aur team owner ki details bata di jayengi.\n\n— Tournament Organising Committee`;
   }
   if (status === "rejected")
-    return `Namaste ${name}, ${tournamentName} ke liye aapka registration approve nahi ho saka, kyunki aapka payment receive/verify nahi hua hai ya payment screenshot sahi ya saaf nahi hai.\n\nKripya apna payment check karke sahi aur readable payment screenshot organiser ko WhatsApp par bhejein, taaki dobara verification ki ja sake. Sahayata ke liye organiser se sampark karein.\n\n— Tournament Organising Committee`;
+    return `Namaste ${name}, ${tournamentName} ke liye aapka registration approve nahi ho saka, kyunki aapka payment receive/verify nahi hua hai ya payment screenshot sahi ya saaf nahi hai.\n\nKripya apna payment check karke player dashboard mein "Correct & resubmit" kholein aur sahi, readable payment screenshot ke saath form dobara submit karein. Agar pehle payment ho chuka hai toh dobara payment na karein. Sahayata ke liye organiser se sampark karein.\n\n— Tournament Organising Committee`;
   throw new Error("Select Registration Approved or Registration Rejected.");
 }
 

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import request from "supertest";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createApp } from "../src/app.js";
 import { initializeDatabase } from "../src/config/database.js";
 import { Player, Settings } from "../src/models/index.js";
@@ -39,6 +39,27 @@ async function register(agent, data = payload(), file = png) {
   return call
     .attach("playerPhoto", file, "photo.png")
     .attach("paymentProof", png, "receipt.png");
+}
+function resubmit(agent, data, revision = 0, key = randomUUID(), proof) {
+  let call = agent.post("/api/player/resubmit").set("Idempotency-Key", key);
+  for (const [field, value] of Object.entries({
+    ...data,
+    submissionRevision: String(revision),
+  }))
+    call = call.field(field, value);
+  if (proof) call = call.attach("paymentProof", proof, "corrected-proof.png");
+  return call;
+}
+async function rejectedPlayer() {
+  const client = request.agent(app).set("Origin", "http://localhost:5173");
+  const data = payload();
+  await register(client, data);
+  const player = (await client.get("/api/player/me")).body;
+  await admin
+    .patch(`/api/admin/players/${player._id}/decision`)
+    .send({ status: "rejected", reason: "Payment screenshot is not readable." })
+    .expect(200);
+  return { client, data, player };
 }
 async function loginAdmin(target = app) {
   const agent = request.agent(target).set("Origin", "http://localhost:5173");
@@ -307,6 +328,153 @@ test("admin list is alphabetic, filterable and paginated; search treats regex ch
   assert.ok(body.counts.rejected >= 1);
   const empty = await admin.get("/api/admin/players?search=%5B").expect(200);
   assert.equal(empty.body.total, 0);
+});
+
+test("rejected player can correct the same registration, replace proof and retry without duplicates", async () => {
+  const { client, data, player } = await rejectedPlayer();
+  const original = await Player.findById(player._id).select("+passwordHash");
+  const beforeFiles = await mongoose.connection.db
+    .collection("uploads.files")
+    .countDocuments();
+  const key = randomUUID();
+  const updatedData = {
+    ...data,
+    name: "Corrected Cricket Player",
+    age: "23",
+    status: "approved",
+    paymentAmount: "1",
+  };
+  await resubmit(client, updatedData, 0, key, png).expect(200);
+  const corrected = (await client.get("/api/player/me")).body;
+  assert.equal(corrected._id, player._id);
+  assert.equal(corrected.registrationId, player.registrationId);
+  assert.equal(corrected.status, "pending");
+  assert.equal(corrected.name, "Corrected Cricket Player");
+  assert.equal(corrected.paymentAmount, 150);
+  assert.equal(corrected.submissionRevision, 1);
+  assert.equal(corrected.rejectionReason, "");
+  assert.equal(corrected.reviewedAt, undefined);
+  assert.equal(corrected.reviewedBy, undefined);
+  assert.equal(corrected.playerPhotoId, player.playerPhotoId);
+  assert.notEqual(corrected.paymentProofId, player.paymentProofId);
+  assert.equal(corrected.lastResubmissionKey, undefined);
+  assert.equal(corrected.notifications.length, 3);
+  assert.equal(corrected.notifications.at(-1).kind, "submitted");
+  assert.equal(
+    (await Player.findById(player._id).select("+passwordHash")).passwordHash,
+    original.passwordHash,
+  );
+  assert.equal(
+    await mongoose.connection.db.collection("uploads.files").countDocuments(),
+    beforeFiles,
+  );
+  await client.get(`/api/files/${corrected.paymentProofId}`).expect(200);
+  await resubmit(client, updatedData, 0, key, png).expect(200);
+  assert.equal((await Player.findById(player._id)).submissionRevision, 1);
+  await admin
+    .patch(`/api/admin/players/${player._id}/decision`)
+    .send({ status: "approved", submissionRevision: 0 })
+    .expect(409);
+  await admin
+    .patch(`/api/admin/players/${player._id}/decision`)
+    .send({ status: "approved", submissionRevision: 1 })
+    .expect(200);
+  await client.post("/api/auth/logout").expect(200);
+  await client
+    .post("/api/auth/login")
+    .send({ phone: data.phone, password: data.password })
+    .expect(200);
+});
+
+test("resubmission is restricted to the authenticated rejected player and keeps the sign-in number", async () => {
+  const { client, data, player } = await rejectedPlayer();
+  await request(app).post("/api/player/resubmit").expect(401);
+  await resubmit(admin, data).expect(403);
+  await client.post("/api/player/resubmit").expect(400);
+  const other = request.agent(app).set("Origin", "http://localhost:5173");
+  const otherData = payload();
+  await register(other, otherData);
+  await resubmit(other, { ...data, _id: player._id }).expect(409);
+  await resubmit(client, { ...data, phone: otherData.phone }).expect(400);
+  assert.equal((await Player.findById(player._id)).phone, data.phone);
+  assert.equal((await Player.findById(player._id)).status, "rejected");
+});
+
+test("concurrent correction uploads create one revision and clean the losing files", async () => {
+  const { client, data, player } = await rejectedPlayer();
+  const before = await mongoose.connection.db
+    .collection("uploads.files")
+    .countDocuments();
+  const key = randomUUID();
+  const responses = await Promise.all([
+    resubmit(client, data, 0, key, png),
+    resubmit(client, data, 0, key, png),
+  ]);
+  assert.deepEqual(
+    responses.map((r) => r.status),
+    [200, 200],
+  );
+  assert.equal((await Player.findById(player._id)).submissionRevision, 1);
+  assert.equal((await Player.findById(player._id)).notifications.length, 3);
+  assert.equal(
+    await mongoose.connection.db.collection("uploads.files").countDocuments(),
+    before,
+  );
+  await admin
+    .patch(`/api/admin/players/${player._id}/decision`)
+    .send({
+      status: "rejected",
+      reason: "Still not readable.",
+      submissionRevision: 1,
+    })
+    .expect(200);
+  await resubmit(client, data, 0, randomUUID(), png).expect(409);
+  assert.equal(
+    await mongoose.connection.db.collection("uploads.files").countDocuments(),
+    before,
+  );
+  await resubmit(client, data, 1, randomUUID()).expect(200);
+  assert.equal((await Player.findById(player._id)).submissionRevision, 2);
+});
+
+test("invalid corrections leave the rejected profile and original images intact", async () => {
+  const { client, data, player } = await rejectedPlayer();
+  const before = await mongoose.connection.db
+    .collection("uploads.files")
+    .countDocuments();
+  await resubmit(client, { ...data, age: "200" }).expect(400);
+  await resubmit(
+    client,
+    data,
+    0,
+    randomUUID(),
+    Buffer.from("not-an-image"),
+  ).expect(400);
+  const current = await Player.findById(player._id);
+  assert.equal(current.status, "rejected");
+  assert.equal(current.paymentProofId.toString(), player.paymentProofId);
+  assert.equal(
+    await mongoose.connection.db.collection("uploads.files").countDocuments(),
+    before,
+  );
+});
+
+test("existing rejected applications can be corrected after new registration closes", async () => {
+  const { data, player } = await rejectedPlayer();
+  const closed = createApp({
+    env,
+    now: () => new Date("2026-12-22T12:00:00+05:30"),
+  });
+  const client = request.agent(closed).set("Origin", "http://localhost:5173");
+  await client
+    .post("/api/auth/login")
+    .send({ phone: data.phone, password: data.password })
+    .expect(200);
+  await resubmit(client, data).expect(200);
+  assert.equal((await Player.findById(player._id)).status, "pending");
+  await register(request.agent(closed), payload()).then((r) =>
+    assert.equal(r.status, 409),
+  );
 });
 
 test("auction date is admin-only, validates calendar dates and survives older settings clients", async () => {

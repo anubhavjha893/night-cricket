@@ -56,7 +56,11 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
     try {
       const result = await api(`/admin/players/${id}/decision`, {
         method: "PATCH",
-        body: { status, reason },
+        body: {
+          status,
+          reason,
+          submissionRevision: player.submissionRevision || 0,
+        },
       });
       const updated = await load();
       setSuccess(result.message);
@@ -64,6 +68,9 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
     } catch (error) {
       setError(error.message);
       if (error.status === 409) {
+        setVerified(false);
+        setRejecting(false);
+        setReason("");
         await load();
         onDecision();
       }
@@ -104,6 +111,12 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
               <p>{player.registrationId}</p>
             </div>
           </div>
+          {player.submissionRevision > 0 && (
+            <Alert tone="info">
+              Corrected submission #{player.submissionRevision}. Review the
+              updated details and images before making a decision.
+            </Alert>
+          )}
           <dl className="detail-grid">
             <div>
               <dt>Mobile number</dt>

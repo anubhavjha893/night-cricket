@@ -48,6 +48,8 @@ const playerSchema = new Schema(
       index: true,
     },
     rejectionReason: { type: String, default: "" },
+    submissionRevision: { type: Number, default: 0 },
+    lastResubmissionKey: { type: String, select: false },
     reviewedAt: Date,
     reviewedBy: { type: Schema.Types.ObjectId, ref: "Admin" },
     notifications: [notification],
