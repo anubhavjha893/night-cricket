@@ -244,6 +244,7 @@ export function Players() {
       </div>
       {whatsappContact && (
         <WhatsAppMessageDialog
+          key={`${whatsappContact.player._id}:${whatsappContact.status || "choice"}`}
           contact={whatsappContact}
           onClose={closeWhatsApp}
         />
