@@ -68,7 +68,7 @@ try {
         assert.equal(c.payment.payeeName, "Anubhav Jha");
         assert.equal(c.payment.upiId, "8210708838sbi@axl");
         assert.equal(c.fee, 150);
-        assert.equal(c.registration.isOpen, false);
+        assert.equal(typeof c.registration.isOpen, "boolean");
         result.registration = c.registration;
       }
       if (path.endsWith("/qr")) {
@@ -166,13 +166,12 @@ try {
         fullPage: true,
       });
       await page.goto(base + "/#/register", { waitUntil: "networkidle" });
-      await page
-        .getByText(/You can explore the form; submission is available/)
-        .waitFor({ timeout: 15000 });
-      assert.match(
-        await page.locator("body").innerText(),
-        /24 November|24 Nov|not yet|opens/i,
-      );
+      await page.locator("#phone").waitFor({ timeout: 15000 });
+      if (!result.registration.isOpen)
+        assert.match(
+          await page.locator("body").innerText(),
+          /not yet|opens|closed/i,
+        );
       await page
         .getByLabel("Mobile number", { exact: false })
         .fill("9876543210");

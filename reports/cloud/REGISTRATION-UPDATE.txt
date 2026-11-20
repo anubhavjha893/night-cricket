@@ -53,8 +53,8 @@ Rollout: publish the tested commit on a release branch, deploy that exact
 backend commit to Render first, check health/readiness, then update GitHub main
 to publish its matching frontend. The old frontend remains compatible with the
 new API. Existing database indexes do not need dropping or rebuilding.
-Manual live smoke: node tests/security/cloud-smoke.mjs. Keep real registration
-closed until its scheduled opening; do not create real players for this smoke.
+Manual live smoke: node tests/security/cloud-smoke.mjs. Preserve the organiser's
+current registration setting; do not change it or create real players for this smoke.
 Actual final release identity/results are recorded in ignored
 test-results/cloud/final-release.json and test-results/cloud/smoke.json.
 
