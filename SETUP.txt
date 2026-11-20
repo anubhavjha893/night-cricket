@@ -1,0 +1,79 @@
+URMILA GUPTA MEMORIAL CRICKET TOURNAMENT – SEASON 2
+React + Node/Express + MongoDB
+
+LOCAL START (Node 22.12+)
+1. npm install
+2. Copy .env.example to .env if .env does not already exist.
+3. Set JWT_SECRET (32+ random characters), ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters).
+4. Set MONGODB_URI to your local MongoDB or MongoDB Atlas connection string.
+   If MongoDB is not installed, run: npm run dev:database
+   This downloads an official MongoDB binary on its first run and starts a real
+   local database. Its data persists in .data/mongo. Keep that terminal running.
+5. For development, run npm run dev and open http://localhost:5173
+6. For the built application, run npm run build, then npm start.
+   Open http://localhost:4000
+
+ADMIN
+Open /#/admin. Sign in using ADMIN_EMAIL and ADMIN_PASSWORD from your .env.
+The first server start creates that admin account. Later environment changes
+do not silently overwrite an existing administrator's password.
+Players are sorted by name. Search, filter and select a player to review details,
+the player photograph and payment screenshot. Confirm actual payment receipt
+before approval. Rejection requires a reason. Each decision creates a durable
+in-app notification. Reviewed decisions cannot be overwritten by a second click.
+
+PAYMENT
+Default payee: Anubhav Jha
+UPI: 8210708838sbi@axl
+Amount: INR 150
+The QR is generated from these exact payment details. Admin > Payment & settings
+can update them or upload an existing QR. Verify recipient details in a UPI app
+before collecting real payments. The app does not claim to auto-verify payment.
+
+REGISTRATION WINDOW
+24 November 2026 through 20 December 2026, India time.
+The backend enforces these dates. Admin > Payment & settings can explicitly
+open registration early or close it. Test runs use isolated databases and do
+not change live registration settings.
+
+PLAYER FLOW
+Personal details > Player profile > Animated payment QR > Payment proof > Pending.
+Players create a password and sign in with their mobile number to track status.
+The dashboard refreshes every 15 seconds while visible. Approval and rejection
+notifications remain available after signing out. No SMS or WhatsApp is sent.
+If a player forgets their password, they must contact the organiser. Automated
+password recovery and phone OTP verification are not configured.
+
+STORAGE AND PRIVACY
+Application data and original image uploads are stored in MongoDB (GridFS).
+Photos and receipts require an authenticated owner or administrator session.
+Each image is limited to 5 MB and is checked for JPEG, PNG or WebP file content.
+Passwords are bcrypt-hashed. Sessions use HttpOnly signed cookies. Admin routes
+require server-side administrator authorisation. Do not expose MongoDB directly
+to the public internet. Configure database backups and access restrictions.
+
+DOCKER LOCAL OPTION
+Set .env credentials, then run docker compose up --build.
+Open http://localhost:4000. Database data is retained in the named Docker volume.
+The included Compose file is for local HTTP use. It deliberately uses development
+cookie settings. Public deployments must use HTTPS and NODE_ENV=production.
+
+PUBLIC DEPLOYMENT
+Deploy this repository's Dockerfile or npm build/start commands to a Node-capable
+host and provide MONGODB_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, NODE_ENV=
+production, APP_ORIGIN=https://your-domain and the correct TRUST_PROXY value.
+Serve the React build and Express API on the same origin (recommended).
+No separate frontend build-time API URL is needed for this deployment.
+
+The previous ChatGPT Sites host supports the React static build but does not run
+this Express/MongoDB backend. A static-only deployment displays a clear service
+unavailable message and never simulates successful submissions or approvals.
+For a separately hosted frontend set VITE_API_URL=https://your-api-domain before
+building; allow its exact origin in APP_ORIGIN and configure COOKIE_SAME_SITE=none
+with production HTTPS cookies. Cross-site browser cookie restrictions can still
+apply, so the single-origin deployment is preferred.
+
+VERIFICATION
+npm test             Real MongoDB API integration tests in an isolated database.
+npm run test:browser Browser walkthrough using the installed Microsoft Edge.
+npm run build        Production React build.

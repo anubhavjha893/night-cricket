@@ -2,3 +2,11 @@ node_modules/
 *.tar.gz
 *.tar
 .sites-local/
+.env
+.env.*
+!.env.example
+coverage/
+test-results/
+.mongodb-binaries/
+*.log
+.data/

@@ -1,0 +1,9 @@
+node_modules
+.git
+.env
+.env.*
+dist
+.data
+test-results
+.mongodb-binaries
+*.tar.gz

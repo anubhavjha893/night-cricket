@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ugm_cricket
+      # Local HTTP Docker preview. For public deployment use HTTPS and production.
+      NODE_ENV: development
+    depends_on:
+      mongo:
+        condition: service_healthy
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    volumes:
+      - tournament-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  tournament-data:
