@@ -508,8 +508,8 @@ export function Register() {
                         <ShieldCheck size={22} />
                         <p>
                           Check the recipient details in your UPI app. After
-                          paying, keep the screenshot and transaction reference
-                          ready. Payment is verified manually by the organisers.
+                          paying, keep your payment screenshot ready. Payment
+                          is verified manually by the organisers.
                         </p>
                       </div>
                     </>

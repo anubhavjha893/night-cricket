@@ -77,7 +77,7 @@ export function FileUpload({
       <small id={`${id}-help`}>
         {portrait
           ? "Use a recent photograph with your face clearly visible."
-          : "Make sure the amount, date and transaction reference are readable."}
+          : "Make sure the payment amount, date and recipient are readable."}
       </small>
       {error && <span className="field-error">{error}</span>}
     </div>
