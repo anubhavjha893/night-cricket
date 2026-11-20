@@ -39,7 +39,7 @@ const steps = [
     icon: ReceiptText,
   },
 ];
-const roles = ["Batter", "Bowler", "All-rounder", "Wicketkeeper"];
+const roles = ["Batter", "Bowler", "All-rounder", "Wicketkeeper Batsman"];
 
 export function Register() {
   const {
@@ -96,7 +96,11 @@ export function Register() {
             age: String(profile.age),
             phone: profile.phone,
             address: profile.address,
-            roles: profile.roles,
+            roles: profile.roles
+              .slice(0, 1)
+              .map((role) =>
+                role === "Wicketkeeper" ? "Wicketkeeper Batsman" : role,
+              ),
             tshirtSize: profile.tshirtSize,
             declaration: false,
           });
@@ -159,8 +163,7 @@ export function Register() {
     setError("");
     if (step === 1) {
       const nextErrors = {};
-      if (!data.roles.length)
-        nextErrors.roles = "Choose at least one playing role.";
+      if (!data.roles.length) nextErrors.roles = "Choose one playing role.";
       if (!data.tshirtSize) nextErrors.tshirtSize = "Choose your T-shirt size.";
       if (!playerPhoto && !(correcting && existing.playerPhotoId))
         nextErrors.playerPhoto = "Please upload your player photograph.";
@@ -490,7 +493,9 @@ export function Register() {
                     <legend>
                       Playing role <span className="required">*</span>
                     </legend>
-                    <small>Select all roles that apply to you.</small>
+                    <small>
+                      Choose the role that best describes your game.
+                    </small>
                     <div className="role-grid">
                       {roles.map((role) => (
                         <label
@@ -498,16 +503,14 @@ export function Register() {
                           className={`choice-card ${data.roles.includes(role) ? "selected" : ""}`}
                         >
                           <input
-                            type="checkbox"
+                            type="radio"
                             name="roles"
                             value={role}
                             checked={data.roles.includes(role)}
                             onChange={() => {
                               setData((previous) => ({
                                 ...previous,
-                                roles: previous.roles.includes(role)
-                                  ? previous.roles.filter((v) => v !== role)
-                                  : [...previous.roles, role],
+                                roles: [role],
                               }));
                               setErrors((previous) => ({
                                 ...previous,
@@ -790,6 +793,19 @@ export function Register() {
           committee
         </div>
       </div>
+      {busy && (
+        <div className="submission-overlay" role="status" aria-live="polite">
+          <div className="submission-message">
+            <span className="spinner" aria-hidden="true" />
+            <strong>
+              {correcting
+                ? "Submitting your correction…"
+                : "Submitting your registration…"}
+            </strong>
+            <span>Please wait a moment.</span>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -95,6 +95,36 @@ button:disabled {
   color: var(--muted);
   font-size: 14px;
 }
+.submission-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #080c09d9;
+  backdrop-filter: blur(4px);
+}
+.submission-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 360px);
+  padding: 32px 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: center;
+}
+.submission-message strong {
+  font-size: 17px;
+}
+.submission-message > span:last-child {
+  color: var(--muted);
+  font-size: 14px;
+}
 .spinner {
   width: 20px;
   height: 20px;

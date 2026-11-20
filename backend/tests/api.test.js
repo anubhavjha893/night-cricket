@@ -26,7 +26,7 @@ const payload = (overrides = {}) => ({
   phone: `98765${String(++sequence).padStart(5, "0")}`,
   password: "Player-test-pass123",
   address: "Tenughat, Bokaro, Jharkhand 829123",
-  roles: JSON.stringify(["Batter", "All-rounder"]),
+  roles: JSON.stringify(["Batter"]),
   tshirtSize: "L",
   transactionReference: `TESTUTR${sequence}`,
   declaration: "true",
@@ -281,6 +281,11 @@ test("server validates roles, required fields, image content and upload size", a
     payload({ roles: '["Captain"]' }),
   );
   assert.equal(badRole.status, 400);
+  const multipleRoles = await register(
+    request.agent(validationApp).set("Origin", "http://localhost:5173"),
+    payload({ roles: '["Batter","Bowler"]' }),
+  );
+  assert.equal(multipleRoles.status, 400);
   const noConsent = await register(
     request.agent(validationApp).set("Origin", "http://localhost:5173"),
     payload({ declaration: "false" }),

@@ -113,23 +113,24 @@ try {
   await page.locator("#name").fill("Corrected Test Player");
   await page.locator("#age").fill("25");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  assert.equal(
-    await page.getByLabel("Batter", { exact: true }).isChecked(),
-    true,
-  );
+  const batterRole = page.getByRole("radio", { name: "Batter", exact: true });
+  const bowlerRole = page.getByRole("radio", { name: "Bowler", exact: true });
+  assert.equal(await batterRole.isChecked(), true);
+  await bowlerRole.check();
+  assert.equal(await batterRole.isChecked(), false);
+  await batterRole.check();
+  assert.equal(await bowlerRole.isChecked(), false);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByText(/No additional registration fee is charged/).waitFor();
   await page
     .getByRole("button", { name: "Continue to payment proof", exact: true })
     .click();
   await page.getByText(/Current payment screenshot/).waitFor();
-  await page
-    .locator("#paymentProof")
-    .setInputFiles({
-      name: "corrected-proof.png",
-      mimeType: "image/png",
-      buffer: png,
-    });
+  await page.locator("#paymentProof").setInputFiles({
+    name: "corrected-proof.png",
+    mimeType: "image/png",
+    buffer: png,
+  });
   await page.getByRole("checkbox", { name: /I confirm/ }).check();
   await page.screenshot({
     path: "test-results/corrections/form-mobile.png",
@@ -141,9 +142,17 @@ try {
     ),
     true,
   );
+  await page.route("**/api/player/resubmit", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.continue();
+  });
   await page
     .getByRole("button", { name: "Resubmit for verification", exact: true })
     .click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Submitting your correction" })
+    .waitFor();
   await page
     .getByRole("heading", {
       name: "You’re registered. Review is next.",

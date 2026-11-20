@@ -11,9 +11,8 @@ export const registrationSchema = z.object({
   phone: phoneSchema,
   address: z.string().trim().min(10, "Enter your complete address.").max(1000),
   roles: z
-    .array(z.enum(["Batter", "Bowler", "All-rounder", "Wicketkeeper"]))
-    .min(1, "Choose at least one player role.")
-    .max(4),
+    .array(z.enum(["Batter", "Bowler", "All-rounder", "Wicketkeeper Batsman"]))
+    .length(1, "Choose one player role."),
   tshirtSize: z.enum(["XS", "S", "M", "L", "XL", "XXL"]),
   password: z
     .string()

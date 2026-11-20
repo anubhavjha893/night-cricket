@@ -23,7 +23,13 @@ const playerSchema = new Schema(
     roles: [
       {
         type: String,
-        enum: ["Batter", "Bowler", "All-rounder", "Wicketkeeper"],
+        enum: [
+          "Batter",
+          "Bowler",
+          "All-rounder",
+          "Wicketkeeper Batsman",
+          "Wicketkeeper",
+        ],
       },
     ],
     tshirtSize: { type: String, required: true },
