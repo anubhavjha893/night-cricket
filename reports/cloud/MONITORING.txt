@@ -1,0 +1,85 @@
+UPTIMEROBOT AND WAITING SCREEN - 21 NOVEMBER 2026
+
+PRIMARY MONITOR (FRONTEND PROXY + RENDER + ATLAS)
+URL: https://ugm-cricket-season-2.vercel.app/health
+Type: Keyword monitor / HTTP GET
+Interval: 5 minutes
+Healthy HTTP status: 200
+Required response keyword: health is good
+Authentication: none. Do not add database credentials or an admin cookie.
+Enable your own UptimeRobot alert contacts. Run the first check once the service
+has started; a sleeping free instance can take around a minute to wake.
+
+OPTIONAL SEPARATE MONITORS
+Direct backend: https://ugm-cricket-api.onrender.com/health
+Same GET, interval and keyword. Helps distinguish Render/Atlas problems from
+frontend proxy problems.
+Website HTML: https://ugm-cricket-season-2.vercel.app/
+HTTP/keyword GET, keyword UGM Cricket. A static-page 200 alone does not prove
+React, player submission, file uploads or admin review are working.
+Database readiness JSON: https://ugm-cricket-season-2.vercel.app/api/ready
+Expected 200 with {"ok":true}; failure 503 with {"ok":false}.
+Process-only liveness: https://ugm-cricket-api.onrender.com/api/live
+This intentionally does not prove database availability; do not use it as the
+only registration-service monitor.
+
+HEALTH IMPLEMENTATION
+/health and /api/health now use the same bounded Atlas ping as /api/ready.
+Connected DB + successful ping: 200 text/plain, exactly health is good.
+Disconnected DB, failed ping or draining server: 503, Retry-After: 10.
+No secrets, personal records or internal errors are returned.
+Responses are no-store at the backend and Vercel edge. Mixed concurrent health/
+readiness checks share one ping per second; each new monitoring interval performs
+an actual dependency check instead of returning a cached static success.
+The existing Render platform health check stays on /api/ready.
+
+WAITING EXPERIENCE
+Initial configuration and session checks are allowed to finish normally. If
+startup takes over 1.2 seconds, a full-screen branded waiting dialog appears.
+It does not unmount the existing page/form. It closes automatically after both
+checks succeed; an ordinary signed-out 401 counts as a successful session check.
+A failed config/session check shows Retry connection. A successful retry restores
+the original page. Keyboard focus is held within the waiting UI and restored
+afterwards. Mobile layout and reduced-motion preferences are supported.
+Once initial startup has completed, routine settings refreshes do not block the
+whole website or reset an open form. Existing upload progress remains unchanged.
+Previous bounded startup GET retries remain enabled; writes are not auto-replayed.
+
+VERIFIED LOCALLY
+37 backend/API/security tests, 4 WhatsApp helper tests, 2 client deadline/retry
+tests, production build and isolated browser suites. New tests cover actual DB
+disconnect, ping rejection, no-cache GET/HEAD responses, shared concurrent pings,
+mobile waiting screen, recovery with retained input, explicit retry and session
+failure. Production fault injection and load tests were not performed.
+Exact deployed releases/live smoke are recorded in ignored
+test-results/cloud/final-release.json and test-results/cloud/smoke.json.
+Waiting UI screenshots/results: test-results/connection/.
+
+LIMITS AND OWNERSHIP
+The owner will configure UptimeRobot; no monitor or keep-alive job was silently
+created. Regular incoming HTTP requests are documented Render activity, but no
+monitor guarantees uptime, stops a provider outage, resumes a manually paused
+Atlas cluster or prevents connection/billing/quota failures.
+Render Free sleeps after 15 idle minutes and shares 750 free instance hours per
+workspace per calendar month. Keeping one service continuously active uses most
+of that allowance; other free services in the workspace share the same quota.
+Exhausting it can suspend free services. No paid plan was purchased or changed.
+Atlas Free can auto-pause after 30 days without activity. The monitor verifies a
+real driver ping, but Atlas account permissions, backups, cluster configuration,
+manual pause/resume and availability remain the owner's responsibility.
+For required production uptime, use an owner-approved always-on compute plan
+and appropriate Atlas availability/backup settings; monitoring is not failover.
+
+REFERENCES
+https://render.com/docs/free
+https://www.mongodb.com/docs/atlas/pause-terminate-cluster/
+https://help.uptimerobot.com/en/articles/11360876-what-is-a-monitoring-interval-in-uptimerobot
+
+ROLLOUT / ROLLBACK
+Deploy backend first, verify healthy readiness/text, then publish frontend.
+No database migration is needed. Preserve existing credentials and admin settings.
+Previous healthy backend: dep-dc06hcl9el5s73fbft00.
+Previous healthy frontend: dpl_8PbuHAnPoe1PHqpS3N1wZz59m5Hs.
+Rollback can restore these immutable deployments without deleting data. Note that
+the prior /health is process-only and can incorrectly say healthy with a failed
+database; if reverting it, use /api/ready for dependency monitoring instead.

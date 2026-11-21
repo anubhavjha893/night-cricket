@@ -26,13 +26,12 @@ export function createApp({ env = process.env, now = () => new Date() } = {}) {
       next();
     },
   );
-  app.get(["/health", "/api/health"], getHealth);
   app.get("/api/live", (req, res) => res.json({ ok: true }));
   let readinessPromise,
     readinessAt = 0;
-  app.get("/api/ready", async (req, res) => {
+  app.locals.checkReadiness = async () => {
     if (app.locals.draining || mongoose.connection.readyState !== 1)
-      return res.status(503).json({ ok: false });
+      return false;
     if (!readinessPromise || Date.now() - readinessAt >= 1000) {
       readinessAt = Date.now();
       readinessPromise = mongoose.connection.db
@@ -42,7 +41,12 @@ export function createApp({ env = process.env, now = () => new Date() } = {}) {
           () => false,
         );
     }
-    const ready = await readinessPromise;
+    return readinessPromise;
+  };
+  app.get(["/health", "/api/health"], getHealth);
+  app.get("/api/ready", async (req, res) => {
+    const ready = await app.locals.checkReadiness();
+    if (!ready) res.set("Retry-After", "10");
     res.status(ready ? 200 : 503).json({ ok: ready });
   });
   app.use("/api", (req, res, next) => {

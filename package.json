@@ -19,7 +19,7 @@
     "build": "npm run build --workspace frontend && node scripts/prepare-site.mjs",
     "start": "npm run start --workspace backend",
     "test": "npm run test --workspace backend && node --test tests/whatsapp.test.mjs",
-    "test:browser": "node tests/e2e/browser.mjs && node tests/e2e/whatsapp.mjs && node tests/e2e/corrections.mjs",
+    "test:browser": "node tests/e2e/browser.mjs && node tests/e2e/whatsapp.mjs && node tests/e2e/corrections.mjs && node tests/e2e/connection.mjs",
     "preview": "npm run preview --workspace frontend",
     "format": "prettier --write frontend/src backend/src backend/scripts backend/tests tests/e2e frontend/vite.config.js scripts",
     "test:security": "node --test --test-concurrency=1 backend/tests/security.test.js tests/security/client.test.mjs",

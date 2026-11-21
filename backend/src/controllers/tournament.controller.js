@@ -5,8 +5,13 @@ import { registrationWindow } from "../services/registration-window.service.js";
 import { sendImage } from "../services/file.service.js";
 import { fail } from "../utils/http-error.js";
 
-export function getHealth(req, res) {
-  res.status(200).type("text/plain").send("health is good");
+export async function getHealth(req, res) {
+  const ready = await req.app.locals.checkReadiness();
+  if (!ready) res.set("Retry-After", "10");
+  res
+    .status(ready ? 200 : 503)
+    .type("text/plain")
+    .send(ready ? "health is good" : "service temporarily unavailable");
 }
 
 export function createTournamentController({ now }) {

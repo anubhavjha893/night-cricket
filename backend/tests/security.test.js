@@ -585,10 +585,33 @@ test("readiness coalesces parallel probes so public checks cannot fan out databa
   };
   try {
     const responses = await Promise.all(
-      Array.from({ length: 20 }, () => request(target).get("/api/ready")),
+      Array.from({ length: 20 }, (_, index) =>
+        request(target).get(index % 2 ? "/health" : "/api/ready"),
+      ),
     );
     assert.ok(responses.every((r) => r.status === 200));
     assert.equal(pings, 1);
+  } finally {
+    mongoose.connection.db.command = original;
+  }
+});
+
+test("monitor health checks report failed Atlas pings and do not cache healthy responses", async () => {
+  for (const route of ["/health", "/api/health"]) {
+    const healthy = await request(app).get(route).expect(200);
+    assert.equal(healthy.text, "health is good");
+    assert.equal(healthy.headers["cache-control"], "no-store");
+    await request(app).head(route).expect(200);
+  }
+  const original = mongoose.connection.db.command;
+  mongoose.connection.db.command = async () => {
+    throw new Error("Synthetic ping failure");
+  };
+  try {
+    const target = createApp({ env });
+    await request(target).get("/health").expect(503);
+    await request(target).get("/api/ready").expect(503);
+    await request(target).get("/api/live").expect(200);
   } finally {
     mongoose.connection.db.command = original;
   }
@@ -601,7 +624,8 @@ test("actual database loss fails readiness/API quickly while liveness stays heal
   await request(app).get("/api/ready").timeout(2000).expect(503);
   await request(app).get("/api/config").timeout(2000).expect(503);
   await request(app).get("/api/live").expect(200);
-  const health = await request(app).get("/api/health").expect(200);
-  assert.equal(health.text, "health is good");
+  const health = await request(app).get("/api/health").expect(503);
+  assert.equal(health.text, "service temporarily unavailable");
+  assert.equal(health.headers["retry-after"], "10");
   assert.ok(Date.now() - started < 2000);
 });

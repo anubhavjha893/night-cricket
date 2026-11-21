@@ -4,6 +4,7 @@ import { Footer } from "./components/layout/Footer";
 import { AppRoutes } from "./routes/AppRoutes";
 import { useApp } from "./hooks/useApp";
 import { Alert } from "./components/common/Alert";
+import { ConnectionScreen } from "./components/common/ConnectionScreen";
 
 export function App() {
   const { authError } = useApp();
@@ -22,6 +23,7 @@ export function App() {
         <AppRoutes />
       </main>
       <Footer />
+      <ConnectionScreen />
     </>
   );
 }
