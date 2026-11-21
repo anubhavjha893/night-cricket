@@ -5,7 +5,9 @@ import { useApp } from "../hooks/useApp";
 import { SeasonHighlights } from "../components/home/SeasonHighlights";
 
 export function Home() {
-  const { config } = useApp();
+  const { config, configLoading, configError } = useApp();
+  const paymentReady =
+    !configLoading && !configError && config.payment.configured;
   return (
     <>
       <section className="hero wrap">
@@ -199,9 +201,23 @@ export function Home() {
           <details>
             <summary>Who receives the registration payment?</summary>
             <p>
-              Pay ₹150 to Anubhav Jha at 8210708838sbi@axl. Always check the
-              payee details displayed in your UPI app before paying. The current
-              payment QR is shown during registration.
+              {paymentReady ? (
+                <>
+                  Pay ₹{config.payment.amount || config.fee} to{" "}
+                  {config.payment.payeeName || "the organiser"}
+                  {config.payment.upiId ? (
+                    <> at {config.payment.upiId}</>
+                  ) : null}
+                  .{" "}
+                </>
+              ) : (
+                <>
+                  The current payment recipient details are shown during
+                  registration.{" "}
+                </>
+              )}
+              Always check the payee details displayed in your UPI app before
+              paying. Use the current payment QR shown during registration.
             </p>
           </details>
           <details>

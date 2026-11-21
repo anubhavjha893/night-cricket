@@ -7,10 +7,10 @@ export const fallbackConfig = {
   closesAt: "2026-12-21T00:00:00+05:30",
   registration: { isOpen: false, message: "24 November – 20 December 2026" },
   payment: {
-    configured: true,
-    payeeName: "Anubhav Jha",
-    upiId: "8210708838sbi@axl",
+    configured: false,
+    payeeName: "",
+    upiId: "",
     amount: 150,
-    qrUrl: "/api/payment/qr",
+    qrUrl: null,
   },
 };
