@@ -1,3 +1,4 @@
+import { issueUpload } from "../services/imagekit.service.js";
 import { Router } from "express";
 import {
   allowResubmission,
@@ -10,12 +11,26 @@ import { runWork } from "../middleware/work-limit.middleware.js";
 import {
   getPlayerProfile,
   markNotificationsRead,
+  replacePlayerPhoto,
 } from "../controllers/player.controller.js";
 
 export function createPlayerRouter({ requireUser, env, workGate }) {
   const router = Router();
   router.use(requireUser);
+  router.post("/upload-ticket",createSubmissionLimiter(env),(req,res,next)=>req.role==="player"?next():res.sendStatus(403),issueUpload);
   router.get("/me", getPlayerProfile);
+  router.put(
+    "/photo",
+    (req, res, next) =>
+      req.role === "player"
+        ? next()
+        : res.status(403).json({ message: "Player access required." }),
+    createSubmissionLimiter(env),
+    boundedUpload,
+    workGate,
+    upload.single("playerPhoto"),
+    runWork(replacePlayerPhoto),
+  );
   router.post("/notifications/read", markNotificationsRead);
   router.post(
     "/resubmit",

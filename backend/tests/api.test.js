@@ -82,6 +82,40 @@ after(async () => {
   if (db) await db.stop();
 });
 
+test("direct upload claims bind each private image to its purpose and deliver a signed CDN URL", async (t) => {
+  const mediaEnv = { ...env, IMAGEKIT_PRIVATE_KEY: "private_test_only", IMAGEKIT_PUBLIC_KEY: "public_test_only",
+    IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/test", UPSTASH_REDIS_REST_URL: "https://redis.example.test", UPSTASH_REDIS_REST_TOKEN: "test" };
+  const sandbox = createApp({env:mediaEnv,now:()=>new Date("2026-11-25T12:00:00+05:30")});
+  const agent = request.agent(sandbox).set("Origin","http://localhost:5173");
+  const files = new Map();
+  let redisCalls = 0;
+  t.mock.method(globalThis,"fetch",async (url, options) => {
+    if(url===mediaEnv.UPSTASH_REDIS_REST_URL) {
+      assert.equal(JSON.parse(options.body)[0],"EVAL");
+      redisCalls++;
+      return Response.json({result:1});
+    }
+    const fileId = url.match(/^https:\/\/api\.imagekit\.io\/v1\/files\/([a-f0-9]{24})\/details$/)?.[1];
+    assert.ok(files.has(fileId));
+    return Response.json(files.get(fileId));
+  });
+  const data = payload();
+  for(const purpose of ["playerPhoto","paymentProof"]){
+    const {body} = await agent.post("/api/registrations/upload-ticket").send({purpose,mime:"image/png"}).expect(200);
+    assert.equal(body.direct,true);
+    assert.equal(body.fields.isPrivateFile,"true");
+    const fileId = new mongoose.Types.ObjectId().toString();
+    files.set(fileId,{filePath:body.fields.folder+"/"+body.fields.fileName,isPrivateFile:true,fileType:"image",size:100});
+    data[purpose+"Ref"]=JSON.stringify({ticket:body.ticket,fileId});
+  }
+  await agent.post("/api/registrations").send({...data,playerPhotoRef:data.paymentProofRef}).expect(400);
+  await agent.post("/api/registrations").send(data).expect(201);
+  const profile=(await agent.get("/api/player/me").expect(200)).body;
+  const {body}=await agent.get("/api/files/"+profile.paymentProofId+"?delivery=url").expect(200);
+  assert.match(body.url,/^https:\/\/ik\.imagekit\.io\/test\/tournament\/players\/.+ik-s=[0-9a-f]{40}$/);
+  assert.ok(redisCalls>0);
+});
+
 test("public configuration uses the exact supplied payment account and registration dates", async () => {
   const { body } = await request(app).get("/api/config").expect(200);
   assert.equal(body.fee, 150);
@@ -187,6 +221,29 @@ test("another player cannot view private payment proof or impersonate an adminis
     .send({ status: "approved" })
     .expect(403);
   await admin.get(`/api/files/${player.paymentProofId}`).expect(200);
+});
+
+test("players can replace only their photograph and admin sees the same stored image", async () => {
+  const agent = request.agent(app).set("Origin", "http://localhost:5173");
+  await register(agent);
+  const before = (await agent.get("/api/player/me").expect(200)).body;
+  const path = "/api/player/photo";
+  await request(app).put(path).expect(401);
+  await admin.put(path).expect(403);
+  await agent.put(path).field("name", "New name").attach("playerPhoto", png, "new.png").expect(400);
+  await agent.put(path).attach("paymentProof", png, "proof.png").expect(400);
+  await agent.put(path).attach("playerPhoto", Buffer.from("bad image"), "bad.png").expect(400);
+  assert.equal((await agent.get("/api/player/me")).body.playerPhotoId, before.playerPhotoId);
+  const count = await mongoose.connection.db.collection("uploads.files").countDocuments();
+  const replaced = await agent.put(path).attach("playerPhoto", png, "new.png").expect(200);
+  const after = (await agent.get("/api/player/me")).body;
+  for (const key of ["name", "address", "roles", "paymentProofId", "status", "notifications", "submissionRevision"])
+    assert.deepEqual(after[key], before[key]);
+  assert.notEqual(after.playerPhotoId, before.playerPhotoId);
+  assert.equal(replaced.body.playerPhotoId, after.playerPhotoId);
+  assert.equal((await admin.get(`/api/admin/players/${before._id}?fields=photo`)).body.playerPhotoId, after.playerPhotoId);
+  assert.deepEqual((await admin.get(`/api/files/${after.playerPhotoId}`).expect(200)).body, png);
+  assert.equal(await mongoose.connection.db.collection("uploads.files").countDocuments(), count);
 });
 
 test("approval creates one durable player notification and concurrent decisions cannot overwrite it", async () => {

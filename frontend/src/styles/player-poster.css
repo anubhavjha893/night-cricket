@@ -1,0 +1,80 @@
+.poster-panel {
+  text-align: center;
+}
+.player-dashboard-grid .notifications-panel {
+  margin-top: 24px;
+}
+@media (min-width: 801px) {
+  .dashboard .player-dashboard-grid {
+    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.3fr);
+  }
+}
+.poster-panel h2 {
+  margin-bottom: 18px;
+  justify-content: center;
+}
+.player-poster canvas,
+.poster-placeholder {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+}
+.player-poster canvas[hidden] {
+  display: none;
+}
+.poster-placeholder {
+  background: #07192a;
+  color: #ffe6a0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+}
+.poster-panel .player-poster {
+  max-width: 385px;
+  margin-inline: auto;
+}
+.poster-download {
+  margin-top: 16px;
+}
+.poster-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+}
+.poster-panel fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 22px 0 0;
+  text-align: left;
+}
+.poster-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 12px;
+}
+.home-player-poster {
+  display: block;
+  position: absolute;
+  z-index: 2;
+  right: 18px;
+  top: 18px;
+  width: clamp(98px, 12vw, 156px);
+  padding: 4px;
+  background: #07192a;
+  border: 1px solid #c09a52;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px #0008;
+  color: #ffe6a0;
+  text-align: center;
+  text-decoration: none;
+  font: 600 12px/1.25 var(--body);
+}
+.home-player-poster span {
+  display: block;
+  padding-block: 6px 3px;
+}

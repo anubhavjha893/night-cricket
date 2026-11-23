@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
+import sharp from "sharp";
 import { createApp } from "../../backend/src/app.js";
 import { initializeDatabase } from "../../backend/src/config/database.js";
 import { Settings } from "../../backend/src/models/index.js";
@@ -58,7 +59,7 @@ try {
   await page.getByLabel("Mobile number", { exact: false }).fill("9876543210");
   await page
     .getByLabel("Full address", { exact: false })
-    .fill("Tenughat, Bokaro, Jharkhand 829123");
+    .fill("Tenughat Jail Road, Bokaro, Jharkhand Block Seven");
   assert.equal(await page.locator("#password").inputValue(), "9876543210");
   assert.equal(
     await page.locator("#password").evaluate((el) => el.readOnly),
@@ -161,6 +162,41 @@ try {
     .click();
   await admin.getByText("Payment verification", { exact: false }).waitFor();
   await admin.locator(".payment-proof img").waitFor();
+  const poster = page.getByRole("img", { name: /BROWSER TEST PLAYER, BATTER, Tenughat Jail Road, Bokaro, Jharkhand\./ });
+  await poster.waitFor();
+  const originalPhoto = await admin.locator(".review-photo img").getAttribute("src");
+  const replacement = await sharp({
+    create: { width: 220, height: 800, channels: 3, background: "#408060" },
+  }).png().toBuffer();
+  await page.getByRole("button", { name: "Change photo" }).click();
+  await page.locator("#replacement-photo").setInputFiles({
+    name: "replacement.png", mimeType: "image/png", buffer: replacement,
+  });
+  await page.getByRole("button", { name: "Save photo" }).click();
+  await page.getByText("Photo updated.", { exact: true }).waitFor();
+  await admin.waitForFunction((oldUrl) => {
+    const img = document.querySelector(".review-photo img");
+    return img?.complete && img.naturalHeight === 800 && img.src !== oldUrl;
+  }, originalPhoto);
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download poster" }).click();
+  const download = await downloadEvent;
+  const posterFile = await download.path();
+  const meta = await sharp(posterFile).metadata();
+  assert.deepEqual([meta.format, meta.width, meta.height], ["png", 1024, 1536]);
+  for (const [x, y] of [[260, 282], [764, 926]]) {
+    const pixel = await sharp(posterFile).extract({ left: x, top: y, width: 1, height: 1 }).raw().toBuffer();
+    assert.deepEqual([...pixel.subarray(0, 3)], [64, 128, 96]);
+  }
+  await page.goto(origin);
+  const homePoster = page.getByRole("link", { name: "View or edit your player poster" });
+  await homePoster.getByRole("img").waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok((await homePoster.boundingBox()).width < 150);
+  await homePoster.click();
+  await poster.waitFor();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await admin.screenshot({
     path: "test-results/admin-desktop.png",
     fullPage: true,

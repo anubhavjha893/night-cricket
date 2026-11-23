@@ -1,3 +1,4 @@
+import { appendImage } from "../services/directUpload";
 import React, { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import QRCode from "qrcode";
@@ -198,8 +199,8 @@ export function Register() {
           key === "roles" ? JSON.stringify(value) : String(value),
         ),
       );
-      if (playerPhoto) body.append("playerPhoto", playerPhoto);
-      if (paymentProof) body.append("paymentProof", paymentProof);
+      if (playerPhoto) await appendImage(body,"playerPhoto",playerPhoto,correcting);
+      if (paymentProof) await appendImage(body,"paymentProof",paymentProof,correcting);
       if (correcting)
         body.append(
           "submissionRevision",

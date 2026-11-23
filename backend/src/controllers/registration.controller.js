@@ -1,3 +1,4 @@
+import { acceptUpload } from "../services/imagekit.service.js";
 import { Player, Settings } from "../models/index.js";
 import { fail } from "../utils/http-error.js";
 
@@ -76,11 +77,11 @@ export function createRegistrationController({ session, now, env }) {
         "This payment reference has already been submitted. Contact the organiser.",
       );
     const photo = await checkImage(
-      req.files?.playerPhoto?.[0],
+      (await acceptUpload(req,"playerPhoto")) || req.files?.playerPhoto?.[0],
       "Player photograph",
     );
     const proof = await checkImage(
-      req.files?.paymentProof?.[0],
+      (await acceptUpload(req,"paymentProof")) || req.files?.paymentProof?.[0],
       "Payment screenshot",
     );
     const saved = [];
@@ -112,7 +113,7 @@ export function createRegistrationController({ session, now, env }) {
         message: "Registration received. Verification is pending.",
       });
     } catch (error) {
-      await Promise.all(saved.map(deleteImage));
+      await Promise.all(saved.map(id=>deleteImage(id,env)));
       if (
         error.code === 11000 &&
         (await replayRegistration(data, password, res))

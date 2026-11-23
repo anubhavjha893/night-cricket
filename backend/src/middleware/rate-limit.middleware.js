@@ -2,6 +2,31 @@ import { createHmac } from "node:crypto";
 import { ipKeyGenerator } from "express-rate-limit";
 import { RateCounter } from "../models/RateCounter.js";
 
+// Upstash executes each counter update and expiry atomically across all app instances.
+async function redisCounter(env, id, ttl, decrement = false) {
+  const script = decrement
+    ? "local n=tonumber(redis.call('GET',KEYS[1]) or '0'); if n>0 then return redis.call('DECR',KEYS[1]) end; return 0"
+    : "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('PEXPIRE',KEYS[1],ARGV[1]) end; return n";
+  if (
+    !env.UPSTASH_REDIS_REST_URL?.startsWith("https://") ||
+    !env.UPSTASH_REDIS_REST_TOKEN
+  )
+    throw new Error("Incomplete Redis configuration");
+  const response = await fetch(env.UPSTASH_REDIS_REST_URL, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + env.UPSTASH_REDIS_REST_TOKEN,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(["EVAL", script, "1", "ugm:limit:" + id, String(ttl)]),
+    signal: AbortSignal.timeout(2000),
+  });
+  if (!response.ok) throw new Error("Redis unavailable");
+  const { result } = await response.json();
+  if (!Number.isSafeInteger(result)) throw new Error("Invalid Redis response");
+  return result;
+}
+
 export const ipIdentity = (req) =>
   ipKeyGenerator(req.ip || req.socket.remoteAddress || "unknown");
 const accountIdentity = (req) =>
@@ -27,19 +52,24 @@ export function sharedLimiter({
       .digest("hex");
     let counter;
     try {
-      try {
-        counter = await RateCounter.collection.findOneAndUpdate(
-          { _id: id },
-          { $inc: { hits: 1 }, $setOnInsert: { expiresAt } },
-          { upsert: true, returnDocument: "after", maxTimeMS: 1000 },
-        );
-      } catch (error) {
-        if (error.code !== 11000) throw error;
-        counter = await RateCounter.collection.findOneAndUpdate(
-          { _id: id },
-          { $inc: { hits: 1 } },
-          { returnDocument: "after", maxTimeMS: 1000 },
-        );
+      if (env.UPSTASH_REDIS_REST_URL || env.UPSTASH_REDIS_REST_TOKEN) {
+        const hits = await redisCounter(env, id, windowMs);
+        counter = { hits };
+      } else {
+        try {
+          counter = await RateCounter.collection.findOneAndUpdate(
+            { _id: id },
+            { $inc: { hits: 1 }, $setOnInsert: { expiresAt } },
+            { upsert: true, returnDocument: "after", maxTimeMS: 1000 },
+          );
+        } catch (error) {
+          if (error.code !== 11000) throw error;
+          counter = await RateCounter.collection.findOneAndUpdate(
+            { _id: id },
+            { $inc: { hits: 1 } },
+            { returnDocument: "after", maxTimeMS: 1000 },
+          );
+        }
       }
     } catch {
       return res.set("Retry-After", "2").status(503).json({
@@ -64,13 +94,16 @@ export function sharedLimiter({
     if (skipSuccessful)
       res.once("finish", () => {
         if (res.statusCode < 400)
-          RateCounter.collection
-            .updateOne(
-              { _id: id, hits: { $gt: 0 } },
-              { $inc: { hits: -1 } },
-              { maxTimeMS: 1000 },
-            )
-            .catch(() => {});
+          if (env.UPSTASH_REDIS_REST_URL) {
+            redisCounter(env, id, windowMs, true).catch(() => {});
+          } else
+            RateCounter.collection
+              .updateOne(
+                { _id: id, hits: { $gt: 0 } },
+                { $inc: { hits: -1 } },
+                { maxTimeMS: 1000 },
+              )
+              .catch(() => {});
       });
     next();
   };

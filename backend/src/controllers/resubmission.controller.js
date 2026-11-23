@@ -1,3 +1,4 @@
+import { acceptUpload } from "../services/imagekit.service.js";
 import { z } from "zod";
 import { Player } from "../models/index.js";
 import { registrationSchema } from "../validators/registration.schema.js";
@@ -78,12 +79,12 @@ export async function resubmitPlayer(req, res) {
       400,
       "Your sign-in mobile number cannot be changed here. Contact the organiser for help.",
     );
-  const photo = req.files?.playerPhoto?.[0]
+  const photo = (await acceptUpload(req,"playerPhoto")) || (req.files?.playerPhoto?.[0]
     ? await checkImage(req.files.playerPhoto[0], "Player photograph")
-    : null;
-  const proof = req.files?.paymentProof?.[0]
+    : null);
+  const proof = (await acceptUpload(req,"paymentProof")) || (req.files?.paymentProof?.[0]
     ? await checkImage(req.files.paymentProof[0], "Payment screenshot")
-    : null;
+    : null);
   if (!photo && !player.playerPhotoId)
     throw fail(400, "Player photograph is required.");
   if (!proof && !player.paymentProofId)
@@ -103,7 +104,8 @@ export async function resubmitPlayer(req, res) {
     if (submissionRevision === 0)
       revisions.push({ submissionRevision: { $exists: false } });
     const updated = await Player.findOneAndUpdate(
-      { _id: player._id, status: "rejected", $or: revisions },
+      { _id: player._id, status: "rejected", $or: revisions,
+        ...(photo && { playerPhotoId: player.playerPhotoId }) },
       {
         $set: {
           ...details,
@@ -131,7 +133,7 @@ export async function resubmitPlayer(req, res) {
         current?.status === "pending" &&
         current.lastResubmissionKey === key
       ) {
-        await Promise.all(saved.map((id) => deleteImage(id).catch(() => {})));
+        await Promise.all(saved.map((id) => deleteImage(id,req.app.locals.mediaEnv).catch(() => {})));
         return received(current, res);
       }
       throw fail(
@@ -144,11 +146,11 @@ export async function resubmitPlayer(req, res) {
       photo && player.playerPhotoId,
       proof && player.paymentProofId,
     ].filter(Boolean);
-    await Promise.all(replaced.map((id) => deleteImage(id).catch(() => {})));
+    await Promise.all(replaced.map((id) => deleteImage(id,req.app.locals.mediaEnv).catch(() => {})));
     return received(updated, res);
   } catch (error) {
     if (!committed)
-      await Promise.all(saved.map((id) => deleteImage(id).catch(() => {})));
+      await Promise.all(saved.map((id) => deleteImage(id,req.app.locals.mediaEnv).catch(() => {})));
     throw error;
   }
 }

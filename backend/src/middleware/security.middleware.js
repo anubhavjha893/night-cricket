@@ -55,7 +55,7 @@ export function configureSecurity(app, env) {
           ],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "blob:"],
-          connectSrc: ["'self'"],
+          connectSrc: ["'self'", "https://upload.imagekit.io","https://ik.imagekit.io"],
           frameAncestors: ["'none'"],
           upgradeInsecureRequests: production ? [] : null,
         },

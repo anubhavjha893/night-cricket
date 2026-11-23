@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { Trophy, MapPin, Sun, Moon, ShieldCheck } from "lucide-react";
 import { useApp } from "../hooks/useApp";
 import { SeasonHighlights } from "../components/home/SeasonHighlights";
+import { HomePlayerPoster } from "../components/home/HomePlayerPoster";
 
 export function Home() {
-  const { config, configLoading, configError } = useApp();
+  const { config, configLoading, configError, user } = useApp();
   const paymentReady =
     !configLoading && !configError && config.payment.configured;
   return (
@@ -50,9 +51,13 @@ export function Home() {
             height="737"
             fetchPriority="high"
           />
-          <div className="season-stamp">
-            SEASON<strong>02</strong>
-          </div>
+          {user?.role === "player" ? (
+            <HomePlayerPoster />
+          ) : (
+            <div className="season-stamp">
+              SEASON<strong>02</strong>
+            </div>
+          )}
           <div className="image-caption">
             <span>THE ROAD TO THE FINAL</span>
             <strong>

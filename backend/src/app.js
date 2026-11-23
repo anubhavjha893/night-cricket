@@ -16,6 +16,7 @@ export function createApp({ env = process.env, now = () => new Date() } = {}) {
       "Set JWT_SECRET to a random secret of at least 32 characters.",
     );
   const app = express();
+  app.locals.mediaEnv = env;
   const observation = createObservability(env);
   app.locals.observation = observation;
   app.use(observation.middleware);

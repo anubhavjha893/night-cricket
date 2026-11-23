@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ImageOff } from "lucide-react";
-import { API_BASE } from "../../services/api";
+import { privatePhotoResponse } from "../../services/directUpload";
 
 export function PrivateImage({ id, alt, className = "" }) {
   const [url, setUrl] = useState("");
@@ -10,10 +10,7 @@ export function PrivateImage({ id, alt, className = "" }) {
     let objectUrl;
     setUrl("");
     setFailed(false);
-    fetch(`${API_BASE}/api/files/${id}`, {
-      credentials: "include",
-      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
-    })
+    privatePhotoResponse(id, AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]))
       .then((response) => {
         if (!response.ok) throw new Error("Image unavailable");
         return response.blob();

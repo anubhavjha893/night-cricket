@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import {
   Bell,
@@ -18,6 +18,7 @@ import { StatusBadge } from "../components/common/StatusBadge";
 import { useApp } from "../hooks/useApp";
 
 import { PrivateImage } from "../components/common/PrivateImage";
+import { PlayerPosterPanel } from "../components/common/PlayerPosterPanel";
 
 export function Dashboard() {
   const { user, authLoading } = useApp();
@@ -25,15 +26,19 @@ export function Dashboard() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [marking, setMarking] = useState(false);
+  const profileRequest = useRef(0);
   async function load() {
+    const request = ++profileRequest.current;
     setRefreshing(true);
     try {
-      setPlayer(await api("/player/me"));
+      const profile = await api("/player/me");
+      if (request !== profileRequest.current) return;
+      setPlayer(profile);
       setError("");
     } catch (error) {
-      setError(error.message);
+      if (request === profileRequest.current) setError(error.message);
     } finally {
-      setRefreshing(false);
+      if (request === profileRequest.current) setRefreshing(false);
     }
   }
   useEffect(() => {
@@ -126,6 +131,14 @@ export function Dashboard() {
             </div>
           )}
           <div className="player-dashboard-grid">
+            <PlayerPosterPanel
+              player={player}
+              onPhotoChange={(playerPhotoId) => {
+                ++profileRequest.current;
+                setRefreshing(false);
+                setPlayer((current) => ({ ...current, playerPhotoId }));
+              }}
+            />
             <div>
               <div className="panel">
                 <div className="panel-heading">
@@ -222,61 +235,63 @@ export function Dashboard() {
                   </div>
                 </div>
               </div>
-            </div>
-            <aside className="panel notifications-panel">
-              <div className="panel-heading">
-                <h2>
-                  <Bell size={20} /> Notifications{" "}
+              <aside className="panel notifications-panel">
+                <div className="panel-heading">
+                  <h2>
+                    <Bell size={20} /> Notifications{" "}
+                    {unread > 0 && (
+                      <span className="notification-count">{unread}</span>
+                    )}
+                  </h2>
                   {unread > 0 && (
-                    <span className="notification-count">{unread}</span>
+                    <button
+                      className="inline-button"
+                      onClick={markRead}
+                      disabled={marking}
+                    >
+                      {marking ? "Saving…" : "Mark all read"}
+                    </button>
                   )}
-                </h2>
-                {unread > 0 && (
-                  <button
-                    className="inline-button"
-                    onClick={markRead}
-                    disabled={marking}
-                  >
-                    {marking ? "Saving…" : "Mark all read"}
-                  </button>
-                )}
-              </div>
-              <p className="small-note">
-                Updates appear here when the organising team reviews your
-                registration. This page refreshes automatically while open.
-              </p>
-              <div className="notification-list">
-                {[...player.notifications].reverse().map((notification) => (
-                  <article
-                    key={notification._id}
-                    className={`notification ${notification.readAt ? "" : "unread"}`}
-                  >
-                    <span className={`notification-icon ${notification.kind}`}>
-                      {notification.kind === "approved" ? (
-                        <CheckCircle2 size={19} />
-                      ) : notification.kind === "rejected" ? (
-                        <XCircle size={19} />
-                      ) : (
-                        <Inbox size={19} />
-                      )}
-                    </span>
-                    <div>
-                      <strong>
-                        {notification.kind === "approved"
-                          ? "Registration approved"
-                          : notification.kind === "rejected"
-                            ? "Registration rejected"
-                            : "Application received"}
-                      </strong>
-                      <p>{notification.message}</p>
-                      <time dateTime={notification.createdAt}>
-                        {formatDate(notification.createdAt)}
-                      </time>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </aside>
+                </div>
+                <p className="small-note">
+                  Updates appear here when the organising team reviews your
+                  registration. This page refreshes automatically while open.
+                </p>
+                <div className="notification-list">
+                  {[...player.notifications].reverse().map((notification) => (
+                    <article
+                      key={notification._id}
+                      className={`notification ${notification.readAt ? "" : "unread"}`}
+                    >
+                      <span
+                        className={`notification-icon ${notification.kind}`}
+                      >
+                        {notification.kind === "approved" ? (
+                          <CheckCircle2 size={19} />
+                        ) : notification.kind === "rejected" ? (
+                          <XCircle size={19} />
+                        ) : (
+                          <Inbox size={19} />
+                        )}
+                      </span>
+                      <div>
+                        <strong>
+                          {notification.kind === "approved"
+                            ? "Registration approved"
+                            : notification.kind === "rejected"
+                              ? "Registration rejected"
+                              : "Application received"}
+                        </strong>
+                        <p>{notification.message}</p>
+                        <time dateTime={notification.createdAt}>
+                          {formatDate(notification.createdAt)}
+                        </time>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </aside>
+            </div>
           </div>
         </>
       )}

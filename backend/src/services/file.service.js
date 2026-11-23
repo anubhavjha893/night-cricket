@@ -1,3 +1,4 @@
+import { storeRemote, removeRemote, delivery } from "./imagekit.service.js";
 import mongoose from "mongoose";
 import { fileTypeFromBuffer } from "file-type";
 
@@ -8,6 +9,7 @@ export function fileBucket() {
 }
 
 export async function checkImage(file, label) {
+  if (file?.remoteAsset) return file;
   if (!file)
     throw Object.assign(new Error(`${label} is required.`), { status: 400 });
   let type;
@@ -24,6 +26,7 @@ export async function checkImage(file, label) {
 }
 
 export function saveImage(file, purpose) {
+  if (file.remoteAsset) return storeRemote(file.remoteAsset);
   return new Promise((resolve, reject) => {
     const stream = fileBucket().openUploadStream(
       `${purpose}.${file.extension}`,
@@ -40,7 +43,8 @@ export function saveImage(file, purpose) {
   });
 }
 
-export async function deleteImage(id) {
+export async function deleteImage(id, env = process.env) {
+  if(id && await removeRemote(id, env).catch(() => false)) return;
   if (id)
     await fileBucket()
       .delete(id)
@@ -49,7 +53,9 @@ export async function deleteImage(id) {
 
 export async function sendImage(id, res) {
   const objectId = new mongoose.Types.ObjectId(String(id));
+  if (await delivery(objectId,res)) return;
   const [file] = await fileBucket().find({ _id: objectId }).toArray();
+  if (file?.remoteAsset) return file;
   if (!file) return res.status(404).json({ message: "Image not found." });
   res.set({
     "Content-Type": file.metadata.contentType,

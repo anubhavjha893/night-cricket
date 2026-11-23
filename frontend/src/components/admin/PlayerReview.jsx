@@ -42,6 +42,35 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
       active = false;
     };
   }, [id]);
+  useEffect(() => {
+    const controller = new AbortController();
+    let fetching = false;
+    async function refreshPhoto() {
+      if (document.hidden || fetching) return;
+      fetching = true;
+      try {
+        const latest = await api(`/admin/players/${id}?fields=photo`, {
+          signal: controller.signal,
+        });
+        setPlayer((current) =>
+          current?._id === id && current.playerPhotoId !== latest.playerPhotoId
+            ? { ...current, playerPhotoId: latest.playerPhotoId }
+            : current,
+        );
+      } catch {
+        // A temporary disconnect can be retried on the next visible refresh.
+      } finally {
+        fetching = false;
+      }
+    }
+    const timer = setInterval(refreshPhoto, 4000);
+    document.addEventListener("visibilitychange", refreshPhoto);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshPhoto);
+    };
+  }, [id]);
   async function decide(status) {
     if (status === "approved" && !verified) return;
     if (status === "rejected" && reason.trim().length < 5) {

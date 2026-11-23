@@ -149,7 +149,8 @@ export async function listPlayers(req, res) {
 
 export async function getPlayerDetails(req, res) {
   if (!idIsValid(req.params.id)) throw fail(404, "Player not found.");
-  const player = await Player.findById(req.params.id).lean();
+  const projection = req.query.fields === "photo" ? "playerPhotoId" : undefined;
+  const player = await Player.findById(req.params.id, projection).lean();
   if (!player) throw fail(404, "Player not found.");
   res.json(player);
 }

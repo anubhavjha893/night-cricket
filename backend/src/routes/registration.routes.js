@@ -1,3 +1,4 @@
+import { issueUpload } from "../services/imagekit.service.js";
 import { Router } from "express";
 import { createRegistrationController } from "../controllers/registration.controller.js";
 import { runWork } from "../middleware/work-limit.middleware.js";
@@ -10,6 +11,7 @@ import {
 
 export function createRegistrationRouter(context) {
   const router = Router();
+  router.post("/upload-ticket",createSubmissionLimiter(context.env),registrationAvailable(context.now),issueUpload);
   const controller = createRegistrationController(context);
   router.post(
     "/",
