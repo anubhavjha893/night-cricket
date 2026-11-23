@@ -3,6 +3,10 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { useApp } from "../../hooks/useApp";
 
+const warmLogin = () => import("../../pages/Login").catch(() => {});
+
+const warmRegister = () => import("../../pages/Register").catch(() => {});
+
 export function Header() {
   const { user, logout } = useApp();
   const [menu, setMenu] = useState(false);
@@ -31,10 +35,23 @@ export function Header() {
             <LogOut size={16} /> Sign out
           </button>
         ) : (
-          <Link to="/login">Player sign in</Link>
+          <Link
+            onPointerEnter={warmLogin}
+            onFocus={warmLogin}
+            onTouchStart={warmLogin}
+            to="/login"
+          >
+            Player sign in
+          </Link>
         )}
       </nav>
-      <Link className="button button-small header-cta" to="/register">
+      <Link
+        className="button button-small header-cta"
+        onPointerEnter={warmRegister}
+        onFocus={warmRegister}
+        onTouchStart={warmRegister}
+        to="/register"
+      >
         Player registration
       </Link>
       <button

@@ -6,7 +6,7 @@ const highlights = [
   {
     image: "/assets/season-1-welcome.webp",
     imageSet:
-      "/assets/season-1-welcome-640.webp 640w, /assets/season-1-welcome-960.webp 960w, /assets/season-1-welcome.webp 1536w",
+      "/assets/season-1-welcome-420.webp 420w, /assets/season-1-welcome-640.webp 640w, /assets/season-1-welcome-960.webp 960w, /assets/season-1-welcome.webp 1536w",
     alt: "A player and guests sharing a bouquet during the Season 1 gathering",
     title: "A warm welcome.",
     caption: "A moment from our first season’s gathering.",
@@ -14,7 +14,7 @@ const highlights = [
   {
     image: "/assets/season-1-trophy.webp",
     imageSet:
-      "/assets/season-1-trophy-640.webp 640w, /assets/season-1-trophy-960.webp 960w, /assets/season-1-trophy.webp 1536w",
+      "/assets/season-1-trophy-420.webp 420w, /assets/season-1-trophy-640.webp 640w, /assets/season-1-trophy-960.webp 960w, /assets/season-1-trophy.webp 1536w",
     alt: "Two Season 1 cricket players holding a trophy on the ground at night",
     title: "Memories under the lights.",
     caption: "Season 1 players sharing a moment with the trophy.",

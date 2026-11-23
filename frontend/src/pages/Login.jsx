@@ -8,7 +8,7 @@ import { useApp } from "../hooks/useApp";
 import { Field } from "../components/forms/Field";
 
 export function Login({ admin = false }) {
-  const { user, refreshUser } = useApp();
+  const { user, setUser, authLoading } = useApp();
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -19,11 +19,11 @@ export function Login({ admin = false }) {
     setBusy(true);
     setError("");
     try {
-      await api(admin ? "/admin/login" : "/auth/login", {
+      const session = await api(admin ? "/admin/login" : "/auth/login", {
         method: "POST",
         body: { [admin ? "email" : "phone"]: identifier, password },
       });
-      await refreshUser();
+      setUser(session);
       navigate(admin ? "/admin" : "/dashboard", { replace: true });
     } catch (error) {
       setError(error.message);
@@ -110,7 +110,7 @@ export function Login({ admin = false }) {
             required
             maxLength={128}
           />
-          <button className="button full-width" disabled={busy}>
+          <button className="button full-width" disabled={busy || authLoading}>
             {busy
               ? "Signing in…"
               : admin

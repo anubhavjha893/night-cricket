@@ -108,6 +108,8 @@ export function createRegistrationController({ session, now, env }) {
       });
       session.setSession(res, player, "player");
       res.status(201).json({
+        user: {role: "player", name: player.name},
+        playerPhotoId: player.playerPhotoId,
         registrationId: player.registrationId,
         status: player.status,
         message: "Registration received. Verification is pending.",

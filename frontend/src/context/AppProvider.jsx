@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
 import { fallbackConfig } from "../config/tournament";
 import { AppContext } from "./AppContext";
 
 export function AppProvider({ children }) {
+  const submittedPhoto = useRef(null);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [config, setConfig] = useState(fallbackConfig);
@@ -51,6 +52,7 @@ export function AppProvider({ children }) {
     setAuthError("");
     try {
       await api("/auth/logout", { method: "POST" });
+      submittedPhoto.current = null;
       setUser(null);
     } catch {
       setAuthError("Sign out could not be completed. Please try again.");
@@ -65,6 +67,7 @@ export function AppProvider({ children }) {
       value={{
         user,
         setUser,
+        submittedPhoto,
         authLoading,
         refreshUser,
         logout,

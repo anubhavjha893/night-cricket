@@ -14,12 +14,12 @@ for (const [name, extension, fullWidth] of [
 ]) {
   const source = path.join(assets, `${name}.${extension}`);
   const sizes = {};
-  for (const width of [640, 960, fullWidth]) {
+  for (const width of [420, 640, 960, fullWidth]) {
     const filename = `${name}${width === fullWidth ? "" : `-${width}`}.webp`;
     const encoded = await sharp(source)
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: 82, effort: 6 })
+      .webp({ quality: 70, effort: 6 })
       .toFile(path.join(assets, filename));
     sizes[width] = {
       bytes: encoded.size,

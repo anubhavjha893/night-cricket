@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useApp } from "../../hooks/useApp";
 import { Download } from "lucide-react";
 import { privatePhotoResponse } from "../../services/directUpload";
 import {
@@ -9,6 +10,12 @@ import {
 import "../../styles/player-poster.css";
 
 export function PlayerPoster({ player, previewFile, downloadable = false }) {
+  const { submittedPhoto } = useApp();
+  const localPhoto =
+    previewFile ||
+    (submittedPhoto.current?.id === player.playerPhotoId
+      ? submittedPhoto.current.file
+      : null);
   const canvas = useRef(null);
   const [status, setStatus] = useState("loading");
   const [attempt, setAttempt] = useState(0);
@@ -24,9 +31,12 @@ export function PlayerPoster({ player, previewFile, downloadable = false }) {
       setStatus("loading");
       const template = new Image();
       template.src = posterTemplate;
-      let blob = previewFile;
+      let blob = localPhoto;
       if (!blob) {
-        const response = await privatePhotoResponse(player.playerPhotoId,signal);
+        const response = await privatePhotoResponse(
+          player.playerPhotoId,
+          signal,
+        );
         if (!response.ok) throw new Error("Photo unavailable");
         blob = await response.blob();
       }
@@ -47,7 +57,7 @@ export function PlayerPoster({ player, previewFile, downloadable = false }) {
         if (photoUrl) URL.revokeObjectURL(photoUrl);
       });
     return () => controller.abort();
-  }, [player.playerPhotoId, previewFile, name, role, address, attempt]);
+  }, [player.playerPhotoId, localPhoto, name, role, address, attempt]);
 
   function download() {
     canvas.current.toBlob((blob) => {

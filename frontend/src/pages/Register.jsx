@@ -1,7 +1,7 @@
 import { appendImage } from "../services/directUpload";
 import React, { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import QRCode from "qrcode";
+import { posterTemplate } from "../utils/playerPoster";
 import {
   Check,
   UserRound,
@@ -48,6 +48,8 @@ export function Register() {
     configError,
     configLoading,
     refreshConfig,
+    setUser,
+    submittedPhoto,
     refreshUser,
     user,
     authLoading,
@@ -124,7 +126,7 @@ export function Register() {
   useEffect(() => {
     let live = true;
     setQrError(false);
-    if (!config.payment.upiId) {
+    if (step < 1 || !config.payment.upiId) {
       setQr("");
       return;
     }
@@ -135,17 +137,24 @@ export function Register() {
       cu: "INR",
       tn: "UGM Season 2 registration",
     });
-    QRCode.toDataURL(`upi://pay?${params}`, {
-      width: 400,
-      margin: 3,
-      errorCorrectionLevel: "M",
-    }).then((url) => {
-      if (live) setQr(url);
-    });
+    import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(`upi://pay?${params}`, {
+          width: 400,
+          margin: 3,
+          errorCorrectionLevel: "M",
+        }),
+      )
+      .then((url) => {
+        if (live) setQr(url);
+      })
+      .catch(() => {
+        if (live) setQrError(true);
+      });
     return () => {
       live = false;
     };
-  }, [config]);
+  }, [config, step < 1]);
   useEffect(() => {
     const confirmExit = (event) => {
       if (data.name && !busy) {
@@ -199,21 +208,39 @@ export function Register() {
           key === "roles" ? JSON.stringify(value) : String(value),
         ),
       );
-      if (playerPhoto) await appendImage(body,"playerPhoto",playerPhoto,correcting);
-      if (paymentProof) await appendImage(body,"paymentProof",paymentProof,correcting);
+      const template = new Image();
+      template.src = posterTemplate;
+      const results = await Promise.allSettled([
+        playerPhoto &&
+          appendImage(body, "playerPhoto", playerPhoto, correcting),
+        paymentProof &&
+          appendImage(body, "paymentProof", paymentProof, correcting),
+      ]);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
       if (correcting)
         body.append(
           "submissionRevision",
           String(existing.submissionRevision || 0),
         );
-      await api(correcting ? "/player/resubmit" : "/registrations", {
-        method: "POST",
-        body,
-        ...(correcting
-          ? { headers: { "Idempotency-Key": resubmissionKey } }
-          : {}),
-      });
-      await refreshUser();
+      const result = await api(
+        correcting ? "/player/resubmit" : "/registrations",
+        {
+          method: "POST",
+          body,
+          ...(correcting
+            ? { headers: { "Idempotency-Key": resubmissionKey } }
+            : {}),
+        },
+      );
+      if (result.playerPhotoId && playerPhoto) {
+        submittedPhoto.current = {
+          id: result.playerPhotoId,
+          file: playerPhoto,
+        };
+      }
+      if (result.user) setUser(result.user);
+      else await refreshUser();
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(error.message);

@@ -5,6 +5,8 @@ import { useApp } from "../hooks/useApp";
 import { SeasonHighlights } from "../components/home/SeasonHighlights";
 import { HomePlayerPoster } from "../components/home/HomePlayerPoster";
 
+const warmRegister = () => import("../pages/Register").catch(() => {});
+
 export function Home() {
   const { config, configLoading, configError, user } = useApp();
   const paymentReady =
@@ -32,7 +34,13 @@ export function Home() {
             day. Chase the trophy under the lights.
           </p>
           <div className="hero-actions">
-            <Link className="button" to="/register">
+            <Link
+              className="button"
+              onPointerEnter={warmRegister}
+              onFocus={warmRegister}
+              onTouchStart={warmRegister}
+              to="/register"
+            >
               Register as a player
             </Link>
             <Link className="text-link" to="/dashboard">
@@ -44,7 +52,7 @@ export function Home() {
         <div className="hero-visual">
           <img
             src="/assets/night-stadium.webp"
-            srcSet="/assets/night-stadium-640.webp 640w, /assets/night-stadium-960.webp 960w, /assets/night-stadium.webp 1200w"
+            srcSet="/assets/night-stadium-420.webp 420w, /assets/night-stadium-640.webp 640w, /assets/night-stadium-960.webp 960w, /assets/night-stadium.webp 1200w"
             sizes="(max-width: 760px) 100vw, 55vw"
             alt="A cricket stadium illuminated by floodlights at night"
             width="1200"
@@ -249,7 +257,13 @@ export function Home() {
           <br />
           <em>your season.</em>
         </h2>
-        <Link className="button" to="/register">
+        <Link
+          className="button"
+          onPointerEnter={warmRegister}
+          onFocus={warmRegister}
+          onTouchStart={warmRegister}
+          to="/register"
+        >
           Start your registration
         </Link>
         <p>24 November – 20 December 2026 · ₹150 per player</p>
