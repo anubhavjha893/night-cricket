@@ -39,11 +39,11 @@
   "rewrites": [
     {
       "source": "/health",
-      "destination": "https://ugm-cricket-api.onrender.com/health"
+      "destination": "https://night-cricket.onrender.com/health"
     },
     {
       "source": "/api/:path*",
-      "destination": "https://ugm-cricket-api.onrender.com/api/:path*"
+      "destination": "https://night-cricket.onrender.com/api/:path*"
     },
     { "source": "/((?!api(?:/|$)).*)", "destination": "/index.html" }
   ]
