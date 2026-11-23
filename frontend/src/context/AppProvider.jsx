@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
 import { fallbackConfig } from "../config/tournament";
 import { AppContext } from "./AppContext";
@@ -13,7 +13,15 @@ export function AppProvider({ children }) {
   const [authError, setAuthError] = useState("");
   const [sessionError, setSessionError] = useState("");
   const [startupComplete, setStartupComplete] = useState(false);
-  async function refreshConfig() {
+  const configRequest = useRef(null);
+  const refreshConfig = useCallback(() => {
+    if (configRequest.current) return configRequest.current;
+    configRequest.current = loadConfig().finally(() => {
+      configRequest.current = null;
+    });
+    return configRequest.current;
+  }, []);
+  async function loadConfig() {
     setConfigLoading(true);
     try {
       setConfig(await api("/config"));

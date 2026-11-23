@@ -13,6 +13,8 @@ import {
   LockKeyhole,
   ChevronLeft,
   IndianRupee,
+  CalendarDays,
+  Phone,
 } from "lucide-react";
 import { api, API_BASE } from "../services/api";
 import { Alert } from "../components/common/Alert";
@@ -54,6 +56,16 @@ export function Register() {
     user,
     authLoading,
   } = useApp();
+  const [checkingWindow, setCheckingWindow] = useState(true);
+  useEffect(() => {
+    let active = true;
+    refreshConfig().finally(() => {
+      if (active) setCheckingWindow(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [refreshConfig]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const wantsCorrection = searchParams.get("correct") === "1";
@@ -244,6 +256,7 @@ export function Register() {
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(error.message);
+      if (!correcting && error.status === 409) await refreshConfig();
       if (correcting && error.status === 409) setConflict(true);
       if (error.errors) {
         setErrors(error.errors);
@@ -330,6 +343,61 @@ export function Register() {
         )}
       </section>
     );
+  if (!correcting && (checkingWindow || configLoading))
+    return <Loading>Checking registration availability…</Loading>;
+  if (!correcting && configError)
+    return (
+      <section className="wrap narrow page-space">
+        <Alert>{configError}</Alert>
+        <button className="button" onClick={refreshConfig}>
+          Retry connection
+        </button>
+      </section>
+    );
+  if (!correcting && !config.registration.isOpen) {
+    const upcoming =
+      config.registration.phase === "upcoming" ||
+      (!config.registration.phase &&
+        config.registration.message.startsWith("Registration opens"));
+    const opens =
+      upcoming &&
+      new Intl.DateTimeFormat("en-IN", {
+        dateStyle: "long",
+        timeZone: "Asia/Kolkata",
+      }).format(new Date(config.opensAt));
+    return (
+      <section
+        className="wrap narrow page-space"
+        aria-labelledby="window-heading"
+      >
+        <div className="registration-card window-card">
+          <CalendarDays size={32} aria-hidden="true" />
+          <p className="eyebrow">SEASON 2 · PLAYER REGISTRATION</p>
+          <h1 id="window-heading" className="page-title">
+            {upcoming ? "Registration opens soon." : "Registration closed."}
+          </h1>
+          <p>
+            {upcoming ? (
+              <>
+                You can register from <strong>{opens}</strong>.
+              </>
+            ) : (
+              "New player applications are closed."
+            )}
+          </p>
+          <p>Contact the tournament owner</p>
+          <a className="button" href="tel:+918825170314">
+            <Phone size={17} />
+            8825170314
+          </a>
+          <Link className="back-link" to="/">
+            Back to tournament
+          </Link>
+          <Link className="back-link" to="/login">Already registered? Sign in</Link>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="wrap registration-layout page-space">
       <aside className="registration-sidebar">
@@ -430,15 +498,6 @@ export function Register() {
               </button>
             </Alert>
           )}
-          {!correcting &&
-            !configError &&
-            !configLoading &&
-            !config.registration.isOpen && (
-              <Alert tone="info">
-                {config.registration.message} You can explore the form;
-                submission is available during the registration window.
-              </Alert>
-            )}
           {configLoading && (
             <Loading>
               Connecting to the registration service… The first connection may

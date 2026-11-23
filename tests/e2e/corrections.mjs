@@ -80,10 +80,12 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin + "/#/register");
+  await page.getByRole("link", {name: "Already registered? Sign in"}).click();
   await page.getByLabel("Mobile number", { exact: false }).fill("9876543210");
+  await page.getByLabel("Password", { exact: false }).fill("9876543210");
   await page
     .getByRole("button", {
-      name: "Already registered? Sign in with this number",
+      name: "View my registration",
       exact: true,
     })
     .click();

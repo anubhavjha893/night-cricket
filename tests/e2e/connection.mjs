@@ -61,7 +61,7 @@ try {
   await page.goto("http://127.0.0.1:4181/#/register", {
     waitUntil: "domcontentloaded",
   });
-  await page.locator("#name").fill("Preserved Draft Player");
+  assert.equal(await page.locator("#name").count(), 0);
   const screen = page.getByRole("dialog", {
     name: "Getting things ready.",
     exact: true,
@@ -85,13 +85,32 @@ try {
   });
   release();
   await screen.waitFor({ state: "hidden" });
-  assert.equal(
-    await page.locator("#name").inputValue(),
-    "Preserved Draft Player",
-  );
+  await page.locator("#name").waitFor();
   checks.push(
-    "Slow startup shows mobile waiting screen and resumes automatically without clearing form input",
+    "Registration fields appear only after availability is confirmed",
   );
+  for (const phase of ["upcoming", "closed"]) {
+    config.registration = {
+      isOpen: false,
+      phase,
+      message: "Registration unavailable",
+    };
+    config.opensAt = "2026-11-24T00:00:00+05:30";
+    await page.reload();
+    await page
+      .getByRole("heading", {
+        name:
+          phase === "upcoming"
+            ? "Registration opens soon."
+            : "Registration closed.",
+      })
+      .waitFor();
+    if (phase === "upcoming")
+      await page.getByText("24 November 2026").waitFor();
+    assert.equal(await page.locator('a[href="tel:+918825170314"]').count(), 1);
+    assert.equal(await page.locator("#name").count(), 0);
+  }
+  config.registration = { isOpen: true, message: "Registration open" };
   mode = "failed";
   await page.reload({ waitUntil: "domcontentloaded" });
   const failed = page.getByRole("dialog", {

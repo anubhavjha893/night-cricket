@@ -2328,3 +2328,8 @@ textarea:focus-visible {
     transition: none;
   }
 }
+
+.window-card { padding: clamp(24px, 5vw, 56px); }
+.window-card > svg { color: var(--accent); margin-bottom: 20px; }
+.window-card .page-title { font-size: clamp(36px, 6vw, 64px); }
+.window-card .back-link { display: flex; width: fit-content; margin: 24px 0 0; }

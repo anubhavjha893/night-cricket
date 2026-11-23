@@ -14,5 +14,12 @@ export function registrationWindow(settings, date = new Date()) {
       settings.registrationMode !== "closed"
         ? "Registration opens on 24 November 2026."
         : "Registration is closed. Contact the organisers for assistance.";
-  return { isOpen, message };
+  const upcoming =
+    settings.registrationMode === "scheduled" &&
+    current < Date.parse(tournament.opensAt);
+  return {
+    isOpen,
+    message,
+    phase: isOpen ? "open" : upcoming ? "upcoming" : "closed",
+  };
 }
