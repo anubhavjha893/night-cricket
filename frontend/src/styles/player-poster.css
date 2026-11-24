@@ -78,3 +78,62 @@
   display: block;
   padding-block: 6px 3px;
 }
+.review-poster-button {
+  margin-top: 24px;
+}
+.admin-poster-dialog {
+  width: min(94vw, 520px);
+  max-height: 94dvh;
+  overflow-y: auto;
+  padding: 20px;
+  color: var(--text);
+  background: #111b15;
+  border: 1px solid #45543c;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px #000c;
+}
+.admin-poster-dialog::backdrop {
+  background: #050906d9;
+  backdrop-filter: blur(4px);
+}
+.admin-poster-heading,
+.admin-poster-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-poster-heading {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.admin-poster-heading .eyebrow,
+.admin-poster-heading h2 {
+  margin: 0;
+}
+.admin-poster-heading h2 {
+  margin-top: 3px;
+  font-size: 24px;
+}
+.admin-poster-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--accent);
+  background: #dd8a3514;
+  border: 1px solid #aa703a66;
+  border-radius: 50%;
+}
+.admin-poster-dialog .player-poster {
+  max-width: 420px;
+  margin-inline: auto;
+}
+@media (max-width: 580px) {
+  .admin-poster-dialog {
+    width: calc(100vw - 24px);
+    padding: 14px;
+  }
+  .admin-poster-heading h2 {
+    font-size: 20px;
+  }
+}

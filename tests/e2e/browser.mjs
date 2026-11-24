@@ -149,6 +149,11 @@ try {
     viewport: { width: 1440, height: 1000 },
   });
   const admin = await adminContext.newPage();
+  let adminPosterTemplateRequests = 0;
+  admin.on("request", (request) => {
+    if (request.url().endsWith("/assets/participation-template.webp"))
+      adminPosterTemplateRequests++;
+  });
   admin.on("pageerror", (error) => errors.push(error.message));
   await admin.goto(`${origin}/#/admin`);
   await admin.getByLabel("Email address").fill(env.ADMIN_EMAIL);
@@ -156,21 +161,31 @@ try {
   await admin
     .getByRole("button", { name: "Open admin panel", exact: true })
     .click();
-  await admin.getByRole("button", { name: "Player registrations", exact: true }).click();
+  await admin
+    .getByRole("button", { name: "Player registrations", exact: true })
+    .click();
   await admin
     .getByRole("button", { name: "Browser Test Player", exact: true })
     .click();
   await admin.getByText("Payment verification", { exact: false }).waitFor();
   await admin.locator(".payment-proof img").waitFor();
-  const poster = page.getByRole("img", { name: /BROWSER TEST PLAYER, BATTER, Tenughat Jail Road, Bokaro, Jharkhand\./ });
+  const poster = page.getByRole("img", {
+    name: /BROWSER TEST PLAYER, BATTER, Tenughat Jail Road, Bokaro, Jharkhand\./,
+  });
   await poster.waitFor();
-  const originalPhoto = await admin.locator(".review-photo img").getAttribute("src");
+  const originalPhoto = await admin
+    .locator(".review-photo img")
+    .getAttribute("src");
   const replacement = await sharp({
     create: { width: 220, height: 800, channels: 3, background: "#408060" },
-  }).png().toBuffer();
+  })
+    .png()
+    .toBuffer();
   await page.getByRole("button", { name: "Change photo" }).click();
   await page.locator("#replacement-photo").setInputFiles({
-    name: "replacement.png", mimeType: "image/png", buffer: replacement,
+    name: "replacement.png",
+    mimeType: "image/png",
+    buffer: replacement,
   });
   await page.getByRole("button", { name: "Save photo" }).click();
   await page.getByText("Photo updated.", { exact: true }).waitFor();
@@ -178,24 +193,84 @@ try {
     const img = document.querySelector(".review-photo img");
     return img?.complete && img.naturalHeight === 800 && img.src !== oldUrl;
   }, originalPhoto);
+  assert.equal(
+    adminPosterTemplateRequests,
+    0,
+    "Admin poster artwork must stay lazy until the poster is opened",
+  );
+  await admin
+    .getByRole("button", { name: "View registration poster", exact: true })
+    .click();
+  const adminPosterDialog = admin.getByRole("dialog", {
+    name: "Browser Test Player",
+  });
+  await adminPosterDialog.waitFor();
+  const adminPoster = adminPosterDialog.getByRole("img", {
+    name: /BROWSER TEST PLAYER, BATTER, Tenughat Jail Road, Bokaro, Jharkhand\./,
+  });
+  await adminPoster.waitFor();
+  assert.equal(adminPosterTemplateRequests, 1);
+  const adminDownloadEvent = admin.waitForEvent("download");
+  await adminPosterDialog
+    .getByRole("button", { name: "Download poster", exact: true })
+    .click();
+  const adminDownload = await adminDownloadEvent;
+  assert.match(
+    adminDownload.suggestedFilename(),
+    /^UGM2-[A-F0-9]+-player-poster\.png$/,
+  );
+  const adminPosterMeta = await sharp(await adminDownload.path()).metadata();
+  assert.deepEqual(
+    [adminPosterMeta.format, adminPosterMeta.width, adminPosterMeta.height],
+    ["png", 1024, 1536],
+  );
+  await admin.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await adminPosterDialog.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+    true,
+  );
+  await admin.screenshot({
+    path: "test-results/admin-poster-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await admin.setViewportSize({ width: 1440, height: 1000 });
+  await adminPosterDialog
+    .getByRole("button", { name: "Close registration poster", exact: true })
+    .click();
+  await adminPosterDialog.waitFor({ state: "detached" });
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download poster" }).click();
   const download = await downloadEvent;
   const posterFile = await download.path();
   const meta = await sharp(posterFile).metadata();
   assert.deepEqual([meta.format, meta.width, meta.height], ["png", 1024, 1536]);
-  for (const [x, y] of [[260, 282], [764, 926]]) {
-    const pixel = await sharp(posterFile).extract({ left: x, top: y, width: 1, height: 1 }).raw().toBuffer();
+  for (const [x, y] of [
+    [260, 282],
+    [764, 926],
+  ]) {
+    const pixel = await sharp(posterFile)
+      .extract({ left: x, top: y, width: 1, height: 1 })
+      .raw()
+      .toBuffer();
     assert.deepEqual([...pixel.subarray(0, 3)], [64, 128, 96]);
   }
   await page.goto(origin);
-  const homePoster = page.getByRole("link", { name: "View or edit your player poster" });
+  const homePoster = page.getByRole("link", {
+    name: "View or edit your player poster",
+  });
   await homePoster.getByRole("img").waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok((await homePoster.boundingBox()).width < 150);
   await homePoster.click();
   await poster.waitFor();
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await admin.screenshot({
     path: "test-results/admin-desktop.png",

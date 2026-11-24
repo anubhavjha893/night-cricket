@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { X, Check, ShieldCheck, MessageCircle } from "lucide-react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
+import { X, Check, ShieldCheck, MessageCircle, FileImage } from "lucide-react";
 import { api } from "../../services/api";
 import { Alert } from "../../components/common/Alert";
 import { formatDate } from "../../utils/formatDate";
@@ -10,6 +10,8 @@ import { Field } from "../../components/forms/Field";
 
 import { PrivateImage } from "../../components/common/PrivateImage";
 
+const AdminPosterDialog = lazy(() => import("./AdminPosterDialog"));
+
 export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
   const [player, setPlayer] = useState(null);
   const [error, setError] = useState("");
@@ -18,6 +20,7 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [posterOpen, setPosterOpen] = useState(false);
   async function load() {
     const updated = await api(`/admin/players/${id}`);
     setPlayer(updated);
@@ -31,6 +34,7 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
     setVerified(false);
     setRejecting(false);
     setReason("");
+    setPosterOpen(false);
     api(`/admin/players/${id}`)
       .then((result) => {
         if (active) setPlayer(result);
@@ -181,6 +185,13 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
               <dd>{formatDate(player.createdAt)}</dd>
             </div>
           </dl>
+          <button
+            type="button"
+            className="button button-secondary full-width review-poster-button"
+            onClick={() => setPosterOpen(true)}
+          >
+            <FileImage size={17} /> View registration poster
+          </button>
           <div className="payment-review">
             <h3>
               Payment verification <strong>₹{player.paymentAmount}</strong>
@@ -280,6 +291,14 @@ export function PlayerReview({ id, onClose, onDecision, onWhatsApp }) {
                 </p>
               </div>
             </div>
+          )}
+          {posterOpen && (
+            <Suspense fallback={null}>
+              <AdminPosterDialog
+                player={player}
+                onClose={() => setPosterOpen(false)}
+              />
+            </Suspense>
           )}
         </>
       )}
