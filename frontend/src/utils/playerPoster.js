@@ -1,6 +1,19 @@
 // Coordinates are in the original 1024 × 1536 artwork.
 export const posterTemplate = "/assets/participation-template.webp";
 
+const posterFonts = [
+  ['400 122px "Anton"', "PLAYER NAME"],
+  ['800 36px "Barlow Condensed"', "ALL ROUNDER"],
+  ['700 33px "DM Sans"', "PLAYER ADDRESS"],
+];
+
+export async function loadPosterFonts() {
+  if (!document.fonts) return;
+  await Promise.all(
+    posterFonts.map(([font, sample]) => document.fonts.load(font, sample)),
+  );
+}
+
 export function posterDetails(player) {
   return {
     name: player.name.toUpperCase(),
@@ -46,23 +59,23 @@ export function drawPoster(canvas, template, photo, { name, role, address }) {
   gold.addColorStop(0.42, "#ffdc73");
   gold.addColorStop(0.72, "#ffbf22");
   gold.addColorStop(1, "#e18a00");
-  ctx.font = '900 122px Impact, "Arial Black", sans-serif';
+  ctx.font = '400 122px "Anton", Impact, sans-serif';
   ctx.lineWidth = 2;
   ctx.strokeStyle = "#ffe085";
   ctx.strokeText(name, 512, 1047, 777);
   ctx.fillStyle = gold;
   ctx.fillText(name, 512, 1047, 777);
-  ctx.font = '900 36px "Arial Black", sans-serif';
+  ctx.font = '800 36px "Barlow Condensed", "Arial Black", sans-serif';
   ctx.letterSpacing = "6px";
   ctx.fillStyle = "#ffe49a";
   ctx.fillText(role, 512, 1108, 478);
-  ctx.font = "bold 33px Arial, sans-serif";
+  ctx.font = '700 33px "DM Sans", Arial, sans-serif';
   ctx.letterSpacing = "0px";
   ctx.fillStyle = "#ffedc6";
   // Keep extremely long, unbroken address tokens legible inside the plaque.
   let displayAddress = address;
   if (ctx.measureText(address).width > 900) {
-    ctx.font = "bold 26px Arial, sans-serif";
+    ctx.font = '700 26px "DM Sans", Arial, sans-serif';
     const letters = Array.from(address);
     let low = 0,
       high = letters.length;

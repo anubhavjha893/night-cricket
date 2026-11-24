@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { privatePhotoResponse } from "../../services/directUpload";
 import {
   drawPoster,
+  loadPosterFonts,
   posterDetails,
   posterTemplate,
 } from "../../utils/playerPoster";
@@ -44,7 +45,7 @@ export function PlayerPoster({ player, previewFile, downloadable = false }) {
       const photo = new Image();
       photoUrl = URL.createObjectURL(blob);
       photo.src = photoUrl;
-      await Promise.all([template.decode(), photo.decode()]);
+      await Promise.all([template.decode(), photo.decode(), loadPosterFonts()]);
       if (controller.signal.aborted) return;
       drawPoster(canvas.current, template, photo, { name, role, address });
       setStatus("ready");

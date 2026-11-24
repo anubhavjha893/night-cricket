@@ -219,7 +219,8 @@ try {
     adminDownload.suggestedFilename(),
     /^UGM2-[A-F0-9]+-player-poster\.png$/,
   );
-  const adminPosterMeta = await sharp(await adminDownload.path()).metadata();
+  const adminPosterFile = await adminDownload.path();
+  const adminPosterMeta = await sharp(adminPosterFile).metadata();
   assert.deepEqual(
     [adminPosterMeta.format, adminPosterMeta.width, adminPosterMeta.height],
     ["png", 1024, 1536],
@@ -247,6 +248,15 @@ try {
   const posterFile = await download.path();
   const meta = await sharp(posterFile).metadata();
   assert.deepEqual([meta.format, meta.width, meta.height], ["png", 1024, 1536]);
+  const [adminPosterPixels, playerPosterPixels] = await Promise.all([
+    sharp(adminPosterFile).ensureAlpha().raw().toBuffer(),
+    sharp(posterFile).ensureAlpha().raw().toBuffer(),
+  ]);
+  assert.equal(
+    adminPosterPixels.equals(playerPosterPixels),
+    true,
+    "Admin and player downloads must render the exact same poster pixels",
+  );
   for (const [x, y] of [
     [260, 282],
     [764, 926],
