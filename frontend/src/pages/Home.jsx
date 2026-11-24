@@ -7,6 +7,36 @@ import { HomePlayerPoster } from "../components/home/HomePlayerPoster";
 
 const warmRegister = () => import("../pages/Register").catch(() => {});
 
+const tickerItems = [
+  { text: "ONE GROUND." },
+  { text: "ONE GAME.", highlight: true },
+  { text: "ONE UNFORGETTABLE FINAL." },
+  { text: "SEASON 2" },
+  { text: "TENUGHAT" },
+  { text: "DAY MATCHES" },
+  { text: "FINAL UNDER LIGHTS", highlight: true },
+  { text: "PLAY FOR THE TROPHY" },
+];
+
+function TickerCopy({ duplicate = false }) {
+  return (
+    <div className="ticker-copy" aria-hidden={duplicate || undefined}>
+      {tickerItems.map((item) => (
+        <React.Fragment key={item.text}>
+          <span
+            className={`ticker-item${item.highlight ? " ticker-highlight" : ""}`}
+          >
+            {item.text}
+          </span>
+          <span className="ticker-star" aria-hidden="true">
+            ✦
+          </span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 export function Home() {
   const { config, configLoading, configError, user } = useApp();
   const paymentReady =
@@ -77,11 +107,10 @@ export function Home() {
           <span className="sample-label">Representative stadium image</span>
         </div>
       </section>
-      <div className="ticker">
-        <div>
-          ONE GROUND. <span>ONE GAME.</span> ONE UNFORGETTABLE FINAL.{" "}
-          <span className="star">✦</span> SEASON 2{" "}
-          <span className="star">✦</span> TENUGHAT
+      <div className="ticker" role="region" aria-label="Tournament highlights">
+        <div className="ticker-track">
+          <TickerCopy />
+          <TickerCopy duplicate />
         </div>
       </div>
       <section className="tournament-section wrap">

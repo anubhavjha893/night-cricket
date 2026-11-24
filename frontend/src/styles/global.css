@@ -271,15 +271,34 @@ h2 {
   font: 700 24px/1.2 var(--heading);
   letter-spacing: 0.8px;
 }
-.ticker > div {
-  white-space: nowrap;
-  text-align: center;
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 32s linear infinite;
+  will-change: transform;
 }
-.ticker span:not(.star) {
+.ticker-copy {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  white-space: nowrap;
+}
+.ticker-item {
+  padding-inline: 7px;
+}
+.ticker-highlight {
   color: #75341d;
 }
-.ticker .star {
-  margin: 0 24px;
+.ticker-star {
+  margin-inline: 22px;
+}
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+@keyframes ticker-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 .tournament-section {
   padding-block: 88px;
@@ -799,9 +818,8 @@ footer p {
     font-size: 20px;
     padding-block: 13px;
   }
-  .ticker > div {
-    text-align: left;
-    padding-left: 20px;
+  .ticker-star {
+    margin-inline: 17px;
   }
   .tournament-section {
     padding-block: 54px;
@@ -934,5 +952,19 @@ footer p {
   }
   .button {
     transition: none;
+  }
+  .ticker-track {
+    width: auto;
+    animation: none;
+    will-change: auto;
+  }
+  .ticker-copy {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 8px;
+    white-space: normal;
+  }
+  .ticker-copy[aria-hidden="true"] {
+    display: none;
   }
 }

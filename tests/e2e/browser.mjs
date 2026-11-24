@@ -44,6 +44,30 @@ try {
   await mkdir("test-results", { recursive: true });
   await page.goto(origin);
   await page.getByRole("heading", { name: /FOR THE LOVE/ }).waitFor();
+  const tickerTrack = page.locator(".ticker-track");
+  assert.equal(await tickerTrack.locator(".ticker-copy").count(), 2);
+  assert.equal(
+    await tickerTrack.locator('.ticker-copy[aria-hidden="true"]').count(),
+    1,
+  );
+  const tickerAnimation = await tickerTrack.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      name: style.animationName,
+      duration: style.animationDuration,
+      before: style.transform,
+    };
+  });
+  await page.waitForTimeout(120);
+  assert.equal(tickerAnimation.name, "ticker-scroll");
+  assert.equal(tickerAnimation.duration, "32s");
+  assert.notEqual(
+    await tickerTrack.evaluate(
+      (element) => getComputedStyle(element).transform,
+    ),
+    tickerAnimation.before,
+    "Tournament ticker should move continuously",
+  );
   await page.screenshot({
     path: "test-results/home-desktop.png",
     fullPage: true,
